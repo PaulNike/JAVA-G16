@@ -2,15 +2,21 @@ package com.codigo;
 
 import com.codigo.lambda.Operacion;
 import com.codigo.optional.Usuario;
+import com.codigo.record.ProductoRecord;
 import com.codigo.reto1.Desarrollador;
 import com.codigo.reto1.Empleado;
 import com.codigo.reto1.Gerente;
 import com.codigo.reto2.Factura;
 import com.codigo.reto2.Nomina;
 import com.codigo.reto2.Pagable;
+import com.codigo.tryWithResources.LectorArchivoDemo;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.*;
@@ -38,7 +44,7 @@ import static java.util.stream.Collectors.toList;
 @SpringBootApplication
 public class RetoPreSpringApplication {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		SpringApplication.run(RetoPreSpringApplication.class, args);
 
 		// -------------------------------------------------------
@@ -320,6 +326,74 @@ public class RetoPreSpringApplication {
 		registrarProducto.accept("Teclado");
 
 		System.out.println("=====================================================");
+
+		System.out.println("======= TEMA 7: RECORDS ==============");
+
+		ProductoRecord p1 = new ProductoRecord("Laptop", 1500.0, 10);
+		ProductoRecord p2 = new ProductoRecord("Mouse", 25, 50);
+
+		System.out.println(p1); //toString automatico
+		System.out.println(p1.nombre()); //getter
+		System.out.println(p1.equals(p2));  //equals -> false
+
+
+		System.out.println("======= TEMA 8: try with resources ==============");
+
+		//1. Creamos un archivo temporal
+		try (PrintWriter pw = new PrintWriter(new FileWriter("productos.txt"))) {
+			pw.println("Hola, soy la primera linea");
+			pw.println("SOy la segunda linea");
+		} catch (FileNotFoundException e){
+			e.printStackTrace();
+		}
+
+		//2. Leer la primera linea
+		try {
+			String linea = LectorArchivoDemo.leerPrimeraLinea("productos.txt");
+			System.out.println("Leido: " + linea);
+
+
+		}catch (IOException e){
+			System.out.println("Error al Leer: " + e.getMessage());
+		}
+
+
+		/**
+		 *
+		 *
+		 * GET /api/productos — lista todos
+		 * GET /api/productos/5 — uno solo
+		 * POST /api/productos + JSON en body
+		 * PUT /api/productos/5 + JSON completo
+		 * DELETE /api/productos/5
+		 * PATCH /api/productos/5 + campos a cambiar
+		 *
+		 *
+		 * https://api.tienda.com/productos/42?pagina=2&tamaño=10
+		 *
+		 *
+		 * GET /tiendas/5/productos?categoria=zapatos&pagina=1 HTTP/1.1
+		 * POST /tiendas/5/productos HTTP/1.1
+		 *
+		 * HTTP REQUEST :
+		 * 	Metodo
+		 * 	URL
+		 * 	headers
+		 * 	body
+		 *
+		 * HTTP Response:
+		 * 	status (200, 201, 204 | 2xx)
+		 * 	headers
+		 * 	body
+		 *
+		 *
+		 *
+		 *  spring.datasource.username= ${DB_USER}
+		 *  .env
+		 *  DB_USER=postgres
+		 *
+		 * */
+
 	}
 
 
