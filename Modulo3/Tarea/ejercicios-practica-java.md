@@ -1,5 +1,5 @@
 # 📚 Ejercicios de Práctica en Casa — Java Moderno
-### Curso: Pre-Spring Boot · Docente: [Tu nombre]
+### Curso: Pre-Spring Boot · Docente: [Nike Rodriguez]
 
 > **Instrucciones generales**
 > - Crea un proyecto Java (puedes usar el mismo del curso) y resuelve cada ejercicio en su propio método o clase.
