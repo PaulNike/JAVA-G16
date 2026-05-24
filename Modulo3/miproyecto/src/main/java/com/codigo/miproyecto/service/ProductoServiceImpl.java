@@ -5,7 +5,11 @@ import com.codigo.miproyecto.dto.ProductoResponseDTO;
 import com.codigo.miproyecto.mapper.ProductoMapper;
 import com.codigo.miproyecto.model.Producto;
 import com.codigo.miproyecto.repository.ProductoRepository;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +41,15 @@ public class ProductoServiceImpl {
         this.productoRepository = productoRepository;
     }
 
+    @PostConstruct
+    public void init(){
+        System.out.println("ProductoServiceImpl Listo para usar");
+    }
+
+    @PreDestroy
+    public void destroy(){
+        System.out.println("PreDestroy : la aplicacion se esta cerrandoy");
+    }
     /**
      * Lista todos los productos convirtiéndolos a DTOs de respuesta.
      *
@@ -118,5 +131,25 @@ public class ProductoServiceImpl {
         return ProductoMapper.toProductoResponseDto(
                 productoGuardado, "Producto Guardado Correctamente"
         );
+    }
+
+    public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO requestActualziarDTO) {
+        Producto productoExistente = productoRepository.buscarPorId(id);
+
+        if(productoExistente == null)  {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontro el producto");
+        }
+
+        Producto productoActualizar = ProductoMapper.toProducto(requestActualziarDTO);
+        productoActualizar.setId(id);
+
+        Producto productoActualizado = productoRepository.actualizar(productoActualizar);
+
+        return ProductoMapper.toProductoResponseDto(productoActualizado,"Producto Actualizado correctamente");
+
+    }
+
+    public void eliminarProducto(Long id) {
+        productoRepository.eliminar(id);
     }
 }

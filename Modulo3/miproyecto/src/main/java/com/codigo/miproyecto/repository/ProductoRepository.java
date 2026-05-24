@@ -101,4 +101,22 @@ public class ProductoRepository {
         productos.add(producto);
         return producto;
     }
+
+    public void eliminar(Long id) {
+        Producto producto = buscarPorId(id);
+        productos.remove(producto);
+    }
+
+    public Producto actualizar(Producto producto) {
+        for (Producto productoRecorrido : productos) {
+            if(producto.getId().equals(productoRecorrido.getId())) {
+                productoRecorrido.setNombre(producto.getNombre());
+                productoRecorrido.setPrecio(producto.getPrecio());
+                productoRecorrido.setStock(producto.getStock());
+                return productoRecorrido;
+            }
+        }
+        return null;
+    }
+
 }
