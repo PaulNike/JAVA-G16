@@ -21,6 +21,7 @@ public class ProductoMapper {
         productoResponseDTO.setNombre(producto.getNombre());
         productoResponseDTO.setPrecio(producto.getPrecio());
         productoResponseDTO.setStock(producto.getStock());
+        productoResponseDTO.setFechaCreacion(producto.getFechaCreacion());
         productoResponseDTO.setMensaje(mensaje);
         return productoResponseDTO;
     }

@@ -1,5 +1,11 @@
 package com.codigo.miproyecto.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.*;
+
+import java.time.LocalDate;
+
 /**
  * DTO DE SALIDA (Response) - Patrón DTO (Data Transfer Object)
  *
@@ -23,8 +29,11 @@ public class ProductoResponseDTO {
     // con qué identificador quedó registrado el recurso.
     private Long id;
     private String nombre;
+    @JsonIgnore
     private Double precio;
     private Integer stock;
+    @JsonFormat(pattern="dd-MM-yyyy")
+    private LocalDate fechaCreacion;
 
     // Campo adicional exclusivo de la respuesta: mensaje informativo
     // para el cliente (ej: "Producto creado correctamente").
@@ -41,14 +50,6 @@ public class ProductoResponseDTO {
      * Constructor completo: permite crear el objeto de respuesta en una
      * sola línea, muy útil dentro del Service al armar la respuesta.
      */
-    public ProductoResponseDTO(Long id, String nombre, Double precio,
-                               Integer stock, String mensaje) {
-        this.id = id;
-        this.nombre = nombre;
-        this.precio = precio;
-        this.stock = stock;
-        this.mensaje = mensaje;
-    }
 
     // Getters y Setters: misma justificación que en ProductoRequestDTO.
     // Jackson usa los getters para convertir este objeto a JSON en la respuesta.
@@ -66,4 +67,14 @@ public class ProductoResponseDTO {
 
     public String getMensaje() { return mensaje; }
     public void setMensaje(String mensaje) { this.mensaje = mensaje; }
+
+    public LocalDate getFechaCreacion() {
+        return fechaCreacion;
+    }
+
+    public void setFechaCreacion(LocalDate fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
+    }
+
 }
+

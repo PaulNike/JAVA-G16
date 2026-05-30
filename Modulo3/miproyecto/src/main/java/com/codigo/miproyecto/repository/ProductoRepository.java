@@ -3,6 +3,7 @@ package com.codigo.miproyecto.repository;
 import com.codigo.miproyecto.model.Producto;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,9 +53,9 @@ public class ProductoRepository {
      * Útil para tener datos de prueba disponibles desde el arranque.
      */
     public ProductoRepository() {
-        productos.add(new Producto(1L, "LAPTOP",  2500.00, 5));
-        productos.add(new Producto(2L, "MOUSE",    100.00, 10));
-        productos.add(new Producto(3L, "TECLADO",  150.00, 5));
+        productos.add(new Producto(1L, "LAPTOP",  2500.00, 5, LocalDate.now()));
+        productos.add(new Producto(2L, "MOUSE",    100.00, 10, LocalDate.now()));
+        productos.add(new Producto(3L, "TECLADO",  150.00, 5, LocalDate.now()));
     }
 
     /**
@@ -113,6 +114,7 @@ public class ProductoRepository {
                 productoRecorrido.setNombre(producto.getNombre());
                 productoRecorrido.setPrecio(producto.getPrecio());
                 productoRecorrido.setStock(producto.getStock());
+                productoRecorrido.setFechaCreacion(producto.getFechaCreacion());
                 return productoRecorrido;
             }
         }

@@ -1,0 +1,261 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-cowork-2026",
+    "name": "CoworkLima API - Examen Nivel 2",
+    "description": "Coleccion completa para probar la API de Reservas de Sala. Examen Practico Nivel 2 - Temas 2.1 a 2.5.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9090",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Info del sistema",
+      "item": [
+        {
+          "name": "GET /api/info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "info"]
+            },
+            "description": "Devuelve nombre, version y autor de la API. Cumple R1 del examen."
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Salas (CRUD)",
+      "item": [
+        {
+          "name": "GET listar salas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/salas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "salas"]
+            },
+            "description": "Devuelve todas las salas con su descripcionCorta calculada (campo derivado)."
+          }
+        },
+        {
+          "name": "GET sala por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/salas/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "salas", "1"]
+            },
+            "description": "Obtiene una sala por su ID (@PathVariable). Devuelve 404 si no existe."
+          }
+        },
+        {
+          "name": "POST crear sala",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"SALA-D4\",\n  \"nombre\": \"Sala Misti\",\n  \"capacidad\": 6,\n  \"ubicacion\": \"Piso 2\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/salas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "salas"]
+            },
+            "description": "Crea una sala (@RequestBody). Si no se envia 'activa', se asume true (R6.2). Devuelve 201 Created."
+          }
+        },
+        {
+          "name": "PUT actualizar sala",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"SALA-A1\",\n  \"nombre\": \"Sala Andes Renovada\",\n  \"capacidad\": 14,\n  \"ubicacion\": \"Piso 3\",\n  \"activa\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/salas/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "salas", "1"]
+            },
+            "description": "Actualiza una sala existente. Status 200 si existe, 404 si no."
+          }
+        },
+        {
+          "name": "DELETE eliminar sala (cascada)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/salas/3",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "salas", "3"]
+            },
+            "description": "Elimina la sala y EN CASCADA todas sus reservas asociadas (regla R6.4). Devuelve 204 No Content."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Reservas",
+      "item": [
+        {
+          "name": "POST crear reserva",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"salaId\": 1,\n  \"responsable\": \"Maria Lopez\",\n  \"email\": \"maria@cowork.pe\",\n  \"fecha\": \"2026-06-10\",\n  \"horaInicio\": \"09:00\",\n  \"horaFin\": \"10:30\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservas"]
+            },
+            "description": "Crea una reserva. El estado SIEMPRE inicia en PENDIENTE (R6.1). El campo passwordInterno nunca aparece en la respuesta."
+          }
+        },
+        {
+          "name": "GET reserva por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservas", "1"]
+            },
+            "description": "Obtiene una reserva por ID (@PathVariable)."
+          }
+        },
+        {
+          "name": "GET filtrar reservas (combinable)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas?estado=PENDIENTE&fecha=2026-06-10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservas"],
+              "query": [
+                { "key": "estado", "value": "PENDIENTE" },
+                { "key": "fecha", "value": "2026-06-10" },
+                { "key": "salaId", "value": "1", "disabled": true }
+              ]
+            },
+            "description": "@RequestParam combinables: estado, fecha, salaId. Todos opcionales. Se aplican con AND (interseccion - R6.5)."
+          }
+        },
+        {
+          "name": "GET reservas por sala",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/sala/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservas", "sala", "1"]
+            },
+            "description": "Lista las reservas de una sala usando @PathVariable."
+          }
+        },
+        {
+          "name": "PUT confirmar reserva",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/1/estado?nuevoEstado=CONFIRMADA",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservas", "1", "estado"],
+              "query": [
+                { "key": "nuevoEstado", "value": "CONFIRMADA" }
+              ]
+            },
+            "description": "Combina @PathVariable + @RequestParam. Solo acepta PENDIENTE, CONFIRMADA o CANCELADA (R6.3)."
+          }
+        },
+        {
+          "name": "PUT estado invalido (debe fallar)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/1/estado?nuevoEstado=ARCHIVADA",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservas", "1", "estado"],
+              "query": [
+                { "key": "nuevoEstado", "value": "ARCHIVADA" }
+              ]
+            },
+            "description": "Caso de error: estado invalido. Debe lanzar RuntimeException con mensaje claro (R6.3)."
+          }
+        },
+        {
+          "name": "DELETE eliminar reserva",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservas", "1"]
+            },
+            "description": "Elimina una reserva. Devuelve 204 No Content."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Comprobantes (multipart)",
+      "item": [
+        {
+          "name": "POST subir comprobante PDF",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Cliente-Id", "value": "1001" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Archivo PDF de comprobante"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/1/comprobante",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservas", "1", "comprobante"]
+            },
+            "description": "Combina los tres canales mas avanzados:\n - @PathVariable (id de reserva)\n - @RequestHeader X-Cliente-Id\n - MultipartFile para el PDF\n\nDevuelve el nombre y tamano del archivo recibido."
+          }
+        }
+      ]
+    }
+  ]
+}

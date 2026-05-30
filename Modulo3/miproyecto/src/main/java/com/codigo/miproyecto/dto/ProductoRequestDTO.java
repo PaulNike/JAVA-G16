@@ -1,5 +1,10 @@
 package com.codigo.miproyecto.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
+
 /**
  * DTO DE ENTRADA (Request) - Patrón DTO (Data Transfer Object)
  *
@@ -27,9 +32,14 @@ public class ProductoRequestDTO {
 
     // Campos que el cliente PUEDE y DEBE enviar al crear un producto.
     // Nótese la ausencia del campo 'id': el servidor lo asigna, no el cliente.
+    @Size(min=1, max=10)
     private String nombre;
     private Double precio;
+    @Min(1)
+    @Max(9)
     private Integer stock;
+    @Email(message = "ESTO NO ES UN CORREO!!!!")
+    private String correo;
 
     /**
      * Constructor vacío (no-args): OBLIGATORIO para que Jackson (librería de
@@ -71,7 +81,14 @@ public class ProductoRequestDTO {
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
 
-    //ProductoRequestDTO = loque el cliente manda
+    public String getCorreo() {
+        return correo;
+    }
+
+    public void setCorreo(String correo) {
+        this.correo = correo;
+    }
+//ProductoRequestDTO = loque el cliente manda
     // Producto = lo que el sistema usa internamente
     //ProductoResponsetDTO = lo qeu el sistema responde
 

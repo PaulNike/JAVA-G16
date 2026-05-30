@@ -5,6 +5,7 @@ import com.codigo.miproyecto.dto.ProductoResponseDTO;
 import com.codigo.miproyecto.model.Producto;
 import com.codigo.miproyecto.repository.ProductoRepository;
 import com.codigo.miproyecto.service.ProductoServiceImpl;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -154,7 +155,7 @@ public class ProductoController {
      * la entrada antes de llegar al Service.
      */
     @PostMapping
-    public ResponseEntity<ProductoResponseDTO> createProducto(@RequestBody ProductoRequestDTO producto) {
+    public ResponseEntity<ProductoResponseDTO> createProducto(@Valid  @RequestBody ProductoRequestDTO producto) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(productoService.crearProducto(producto));

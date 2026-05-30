@@ -1,5 +1,7 @@
 package com.codigo.miproyecto.model;
 
+import java.time.LocalDate;
+
 /**
  * MODELO / ENTIDAD DE DOMINIO
  *
@@ -30,6 +32,7 @@ public class Producto {
     private String nombre;
     private Double precio;
     private Integer stock; // Cantidad disponible en inventario
+    private LocalDate fechaCreacion;
 
     /**
      * Constructor vacío: requerido por frameworks como Jackson o JPA
@@ -41,11 +44,12 @@ public class Producto {
      * Constructor completo: facilita la creación de objetos Producto
      * en una sola línea (muy usado en el Repository para datos de prueba).
      */
-    public Producto(Long id, String nombre, Double precio, Integer stock) {
+    public Producto(Long id, String nombre, Double precio, Integer stock, LocalDate fechaCreacion) {
         this.id = id;
         this.nombre = nombre;
         this.precio = precio;
         this.stock = stock;
+        this.fechaCreacion = fechaCreacion;
     }
 
     /**
@@ -64,4 +68,12 @@ public class Producto {
 
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
+
+    public LocalDate getFechaCreacion() {
+        return fechaCreacion;
+    }
+
+    public void setFechaCreacion(LocalDate fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
+    }
 }
