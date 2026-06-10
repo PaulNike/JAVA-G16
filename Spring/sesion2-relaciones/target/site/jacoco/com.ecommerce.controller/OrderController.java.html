@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.controller</a> &gt; <span class="el_source">OrderController.java</span></div><h1>OrderController.java</h1><pre class="source lang-java linenums">package com.ecommerce.controller;
+
+import com.ecommerce.entity.Order;
+import com.ecommerce.entity.OrderStatus;
+import com.ecommerce.service.OrderService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Sesion 2 - OrderController: exposicion REST y endpoints de demostracion
+ *
+ * Este controller hace dos cosas:
+ *
+ * 1. CRUD basico de pedidos (POST, GET por id, GET por status).
+ *    No hay PUT ni DELETE: en e-commerce, los pedidos raramente se modifican;
+ *    se cancelan (cambio de estado).
+ *
+ * 2. Endpoints de DEMOSTRACION del problema N+1 y sus soluciones.
+ *    Durante la clase, van a llamar estos endpoints en orden y observar
+ *    en la consola cuantas queries ejecuta Hibernate en cada caso:
+ *
+ *    GET /api/orders/demo/n1-problem   -&gt; problema: 1 + N queries
+ *    GET /api/orders/demo/join-fetch   -&gt; solucion: 1 query con JOIN FETCH
+ *    GET /api/orders/demo/entity-graph -&gt; solucion: 1 query con @EntityGraph
+ *
+ * 3. Endpoints de REPORTE con JPQL avanzado:
+ *    GET /api/orders/reports/sales-by-customer -&gt; GROUP BY + SUM en JPQL
+ *    GET /api/orders/reports/count-by-status   -&gt; GROUP BY + COUNT en JPQL
+ *
+ * La arquitectura HTTP aqui es: Controller -&gt; Service -&gt; Repository.
+ * El controller no conoce nada de JPA ni de descuentos: solo HTTP.
+ */
+@RestController
+@RequestMapping(&quot;/api/orders&quot;)
+<span class="nc" id="L40">@RequiredArgsConstructor</span>
+public class OrderController {
+
+    private final OrderService orderService;
+
+    // POST /api/orders
+    // Body: {&quot;customerId&quot;:1,&quot;productIds&quot;:[1,2],&quot;quantities&quot;:[2,1]}
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Order create(@RequestBody Map&lt;String, Object&gt; body) {
+<span class="nc" id="L50">        Long customerId = Long.valueOf(body.get(&quot;customerId&quot;).toString());</span>
+<span class="nc" id="L51">        List&lt;Integer&gt; rawProductIds = (List&lt;Integer&gt;) body.get(&quot;productIds&quot;);</span>
+<span class="nc" id="L52">        List&lt;Integer&gt; quantities    = (List&lt;Integer&gt;) body.get(&quot;quantities&quot;);</span>
+<span class="nc" id="L53">        List&lt;Long&gt; productIds = rawProductIds.stream().map(Long::valueOf).toList();</span>
+<span class="nc" id="L54">        return orderService.createOrder(customerId, productIds, quantities);</span>
+    }
+
+    // GET /api/orders
+    @GetMapping
+    public ResponseEntity&lt;List&lt;Order&gt;&gt; getAll() {
+<span class="nc" id="L60">        return ResponseEntity.ok(orderService.getAll());</span>
+    }
+
+    // GET /api/orders/{id}
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Order&gt; getById(@PathVariable Long id) {
+<span class="nc" id="L66">        return ResponseEntity.ok(orderService.getOrderWithFullDetails(id));</span>
+    }
+
+    // GET /api/orders/status/PENDING
+    @GetMapping(&quot;/status/{status}&quot;)
+    public ResponseEntity&lt;List&lt;Order&gt;&gt; getByStatus(@PathVariable OrderStatus status) {
+<span class="nc" id="L72">        return ResponseEntity.ok(orderService.getByStatus(status));</span>
+    }
+
+    // DEMOSTRACION N+1 - llamen estos tres endpoints en orden y comparen queries
+
+    // GET /api/orders/demo/n1-problem -&gt; observen: 1 SELECT orders + N SELECT customer
+    @GetMapping(&quot;/demo/n1-problem&quot;)
+    public ResponseEntity&lt;List&lt;String&gt;&gt; demoProblemaN1() {
+<span class="nc" id="L80">        return ResponseEntity.ok(orderService.demoN1Problem());</span>
+    }
+
+    // GET /api/orders/demo/join-fetch -&gt; 1 sola query con JOIN
+    @GetMapping(&quot;/demo/join-fetch&quot;)
+    public ResponseEntity&lt;List&lt;String&gt;&gt; demoJoinFetch() {
+<span class="nc" id="L86">        return ResponseEntity.ok(orderService.solveN1WithJoinFetch(OrderStatus.PENDING));</span>
+    }
+
+    // GET /api/orders/demo/entity-graph -&gt; mismo resultado que join-fetch, diferente declaracion
+    @GetMapping(&quot;/demo/entity-graph&quot;)
+    public ResponseEntity&lt;List&lt;String&gt;&gt; demoEntityGraph() {
+<span class="nc" id="L92">        return ResponseEntity.ok(orderService.solveN1WithEntityGraph(OrderStatus.PENDING));</span>
+    }
+
+    // REPORTES
+
+    // GET /api/orders/reports/sales-by-customer
+    @GetMapping(&quot;/reports/sales-by-customer&quot;)
+    public ResponseEntity&lt;Map&lt;String, Double&gt;&gt; salesByCustomer() {
+<span class="nc" id="L100">        return ResponseEntity.ok(orderService.getSalesByCustomer());</span>
+    }
+
+    // GET /api/orders/reports/count-by-status
+    @GetMapping(&quot;/reports/count-by-status&quot;)
+    public ResponseEntity&lt;Map&lt;String, Long&gt;&gt; countByStatus() {
+<span class="nc" id="L106">        return ResponseEntity.ok(orderService.getOrderCountByStatus());</span>
+    }
+
+    // GET /api/orders/customer/{customerId}/expensive?minTotal=500
+    @GetMapping(&quot;/customer/{customerId}/expensive&quot;)
+    public ResponseEntity&lt;List&lt;Order&gt;&gt; expensiveOrders(
+            @PathVariable Long customerId,
+            @RequestParam(defaultValue = &quot;100&quot;) Double minTotal) {
+<span class="nc" id="L114">        return ResponseEntity.ok(orderService.getExpensiveOrdersByCustomer(customerId, minTotal));</span>
+    }
+
+    // POST /api/orders/cancel-old?daysOld=30
+    @PostMapping(&quot;/cancel-old&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; cancelOldOrders(
+            @RequestParam(defaultValue = &quot;30&quot;) int daysOld) {
+<span class="nc" id="L121">        int count = orderService.cancelOldOrders(daysOld);</span>
+<span class="nc" id="L122">        return ResponseEntity.ok(Map.of(</span>
+                &quot;message&quot;, &quot;Pedidos cancelados&quot;,
+<span class="nc" id="L124">                &quot;count&quot;, count,</span>
+<span class="nc" id="L125">                &quot;daysOld&quot;, daysOld</span>
+        ));
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LiskovDemo.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.solid</a> &gt; <span class="el_source">LiskovDemo.java</span></div><h1>LiskovDemo.java</h1><pre class="source lang-java linenums">package com.ecommerce.solid;
+
+/**
+ * Sesión 1 — Principio de Sustitución de Liskov (L de SOLID)
+ *
+ * IMPORTANTE: Este archivo no pertenece a la lógica de producción.
+ * Es material de estudio. Léanlo de arriba a abajo junto con el docente.
+ *
+ * El Principio de Liskov dice, en palabras simples:
+ * &quot;Cualquier objeto de una subclase debe poder usarse en lugar de
+ *  un objeto de la superclase SIN que el programa se rompa.&quot;
+ *
+ * Vamos a ver primero el problema, luego la solución.
+ */
+@SuppressWarnings({&quot;unused&quot;, &quot;all&quot;})
+<span class="nc" id="L16">public class LiskovDemo {</span>
+
+    // ─────────────────────────────────────────────────────────────────────
+    // PARTE 1 — LA VIOLACIÓN: herencia que rompe el contrato
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Simulamos la entidad Order de nuestro proyecto (simplificada).
+     * Order establece un contrato claro: puedo agregarle items.
+     */
+<span class="nc" id="L26">    static class Order {</span>
+<span class="nc" id="L27">        protected java.util.List&lt;String&gt; items = new java.util.ArrayList&lt;&gt;();</span>
+
+        public void addItem(String item) {
+<span class="nc" id="L30">            items.add(item);</span>
+<span class="nc" id="L31">        }</span>
+
+        public int itemCount() {
+<span class="nc" id="L34">            return items.size();</span>
+        }
+    }
+
+    /**
+     * ¡ANTI-PATRÓN! Esta clase viola LSP.
+     *
+     * SpecialOrder hereda de Order pero sobreescribe addItem()
+     * lanzando una excepción. Rompe el contrato que Order estableció.
+     *
+     * El problema no es técnico: el código compila sin errores.
+     * El problema es conceptual: cualquier método que reciba un Order
+     * y llame a addItem() va a EXPLOTAR si le pasamos un SpecialOrder.
+     * Y el compilador no nos avisa. El error aparece en producción.
+     */
+<span class="nc" id="L49">    static class SpecialOrderViolatingLSP extends Order {</span>
+
+        @Override
+        public void addItem(String item) {
+            // VIOLA LSP: Order prometió que addItem() funciona siempre.
+            // Esta subclase rompe esa promesa silenciosamente.
+<span class="nc" id="L55">            throw new UnsupportedOperationException(</span>
+                &quot;SpecialOrder no acepta items individuales&quot;);
+        }
+
+        public void addBundle(java.util.List&lt;String&gt; bundle) {
+<span class="nc" id="L60">            items.addAll(bundle);</span>
+<span class="nc" id="L61">        }</span>
+    }
+
+    /**
+     * Este método funciona perfectamente con un Order normal.
+     * Pero si le pasamos un SpecialOrderViolatingLSP, explota.
+     * Eso es una violación de LSP: la subclase NO es sustituible.
+     */
+    static void procesarPedido(Order order) {
+<span class="nc" id="L70">        order.addItem(&quot;Producto A&quot;);   // ← lanza UnsupportedOperationException</span>
+<span class="nc" id="L71">        order.addItem(&quot;Producto B&quot;);   //   si order es SpecialOrderViolatingLSP</span>
+<span class="nc" id="L72">        System.out.println(&quot;Pedido con &quot; + order.itemCount() + &quot; items&quot;);</span>
+<span class="nc" id="L73">    }</span>
+
+    static void demoProblema() {
+<span class="nc" id="L76">        procesarPedido(new Order());                    // OK</span>
+<span class="nc" id="L77">        procesarPedido(new SpecialOrderViolatingLSP()); // EXPLOTA</span>
+<span class="nc" id="L78">    }</span>
+
+
+    // ─────────────────────────────────────────────────────────────────────
+    // PARTE 2 — LA SOLUCIÓN: composición en lugar de herencia rota
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * SpecialOrder correcto: no hereda de Order, la CONTIENE.
+     *
+     * Esto se llama &quot;Composición sobre Herencia&quot; (Composition over Inheritance).
+     * En lugar de pretender ser un Order y romper su contrato,
+     * SpecialOrder tiene un Order interno y lo usa donde lo necesita.
+     *
+     * Ahora los contratos son independientes y claros:
+     *   - Order: &quot;puedo agregar items uno a uno&quot;
+     *   - SpecialOrder: &quot;acepto bundles de items&quot;
+     * Nadie engaña a nadie.
+     */
+<span class="nc" id="L97">    static class SpecialOrderCorrect {</span>
+
+<span class="nc" id="L99">        private final Order innerOrder = new Order();</span>
+
+        public void addBundle(java.util.List&lt;String&gt; bundle) {
+            // Delega en el Order interno, respetando su contrato
+<span class="nc" id="L103">            bundle.forEach(item -&gt; innerOrder.addItem(item));</span>
+<span class="nc" id="L104">        }</span>
+
+        public Order getOrder() {
+<span class="nc" id="L107">            return innerOrder;</span>
+        }
+
+        public int itemCount() {
+<span class="nc" id="L111">            return innerOrder.itemCount();</span>
+        }
+    }
+
+    static void demoSolucion() {
+<span class="nc" id="L116">        SpecialOrderCorrect special = new SpecialOrderCorrect();</span>
+<span class="nc" id="L117">        special.addBundle(java.util.List.of(&quot;A&quot;, &quot;B&quot;, &quot;C&quot;));</span>
+
+        // Cuando necesitamos un Order, usamos el interno — LSP respetado
+<span class="nc" id="L120">        procesarPedido(special.getOrder());</span>
+<span class="nc" id="L121">    }</span>
+
+
+    // ─────────────────────────────────────────────────────────────────────
+    // REGLA PRÁCTICA
+    // ─────────────────────────────────────────────────────────────────────
+    //
+    // Señal de alerta: si en una subclase estás a punto de escribir
+    // throw new UnsupportedOperationException() en un método heredado,
+    // detente. Ese es el síntoma clásico de una violación de LSP.
+    //
+    // Pregúntate: ¿realmente esta clase ES-UN del padre?
+    // Si la respuesta honesta es &quot;no exactamente&quot;, usa composición.
+    //
+    // &quot;Prefiere composición sobre herencia.&quot; — Effective Java, Joshua Bloch
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

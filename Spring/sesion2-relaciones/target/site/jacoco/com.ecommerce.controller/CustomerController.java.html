@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CustomerController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.controller</a> &gt; <span class="el_source">CustomerController.java</span></div><h1>CustomerController.java</h1><pre class="source lang-java linenums">package com.ecommerce.controller;
+
+import com.ecommerce.entity.Customer;
+import com.ecommerce.service.CustomerService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * CONTROLLER: CustomerController
+ * ===============================
+ * Expone los endpoints REST para la gestión de clientes (CRUD).
+ *
+ * URLs disponibles:
+ *   GET    /api/customers        → todos los clientes
+ *   GET    /api/customers/{id}   → uno por id
+ *   POST   /api/customers        → crear cliente
+ *   PUT    /api/customers/{id}   → actualizar cliente
+ *   DELETE /api/customers/{id}   → eliminar cliente
+ */
+@RestController
+@RequestMapping(&quot;/api/customers&quot;)
+<span class="nc" id="L27">@RequiredArgsConstructor</span>
+public class CustomerController {
+
+    private final CustomerService customerService;
+
+    // GET /api/customers
+    @GetMapping
+    public ResponseEntity&lt;List&lt;Customer&gt;&gt; getAll() {
+<span class="nc" id="L35">        return ResponseEntity.ok(customerService.getAll());</span>
+    }
+
+    // GET /api/customers/{id}
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Customer&gt; getById(@PathVariable Long id) {
+<span class="nc" id="L41">        return ResponseEntity.ok(customerService.getById(id));</span>
+    }
+
+    // POST /api/customers
+    // Body: {&quot;name&quot;:&quot;Pedro Ruiz&quot;,&quot;email&quot;:&quot;pedro@email.com&quot;,&quot;address&quot;:&quot;Av. Sol 100&quot;}
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Customer create(@Valid @RequestBody Customer customer) {
+<span class="nc" id="L49">        return customerService.create(customer);</span>
+    }
+
+    // PUT /api/customers/{id}
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Customer&gt; update(
+            @PathVariable Long id,
+            @Valid @RequestBody Customer customer) {
+<span class="nc" id="L57">        return ResponseEntity.ok(customerService.update(id, customer));</span>
+    }
+
+    // DELETE /api/customers/{id}
+    @DeleteMapping(&quot;/{id}&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+<span class="nc" id="L64">        customerService.delete(id);</span>
+<span class="nc" id="L65">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

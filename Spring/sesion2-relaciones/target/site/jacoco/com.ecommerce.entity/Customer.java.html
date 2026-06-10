@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Customer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.entity</a> &gt; <span class="el_source">Customer.java</span></div><h1>Customer.java</h1><pre class="source lang-java linenums">package com.ecommerce.entity;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Sesion 2 - Entidad Customer y la relacion bidireccional con Order
+ *
+ * Esta clase es el punto de partida para entender las relaciones JPA.
+ * La pregunta que guia el diseno es: quien es el &quot;dueno&quot; de la relacion?
+ *
+ * En toda relacion bidireccional hay dos lados:
+ *   - El lado DUENO (owner): el que tiene la clave foranea en la BD.
+ *     En Customer-Order, Order es el dueno porque tiene customer_id.
+ *   - El lado INVERSO (mappedBy): el que referencia al dueno.
+ *     Customer es el lado inverso, por eso usamos mappedBy=&quot;customer&quot;.
+ *
+ * Pregunta de examen: si agrego un Order directamente a customer.orders
+ * sin pasar por el metodo addOrder(), se guarda en la BD?
+ * Respuesta: NO. Hibernate persiste desde el lado DUENO (Order).
+ * Por eso addOrder() asigna ambos lados: orders.add(order) Y order.setCustomer(this).
+ *
+ * PROBLEMA DEL BUCLE INFINITO EN JSON:
+ * Cuando Jackson serializa un Customer, ve la lista orders.
+ * Para serializar cada Order, ve el campo customer.
+ * Para serializar ese customer... vuelve a orders. Bucle infinito.
+ * Tenemos tres estrategias para romperlo (ver comentarios en el campo @OneToMany).
+ */
+@Entity
+@Table(name = &quot;customers&quot;)
+@Getter
+<span class="pc" id="L39">@Setter</span>
+<span class="fc" id="L40">@NoArgsConstructor</span>
+<span class="nc" id="L41">@ToString(exclude = &quot;orders&quot;)  // exclude evita el mismo bucle en toString()</span>
+public class Customer {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="fc" id="L46">    private Long id;</span>
+
+    @Column(nullable = false, length = 150)
+<span class="fc" id="L49">    private String name;</span>
+
+    @Column(nullable = false, unique = true, length = 255)
+<span class="nc" id="L52">    private String email;</span>
+
+    @Column(length = 500)
+<span class="nc" id="L55">    private String address;</span>
+
+    // Campo requerido por VipDiscount (OCP - paquete discount).
+    // Default false: ningun cliente existente se ve afectado al agregar esta columna.
+<span class="fc" id="L59">    @Column(nullable = false)</span>
+<span class="fc" id="L60">    private boolean vip = false;</span>
+
+    // RELACION @OneToMany: un Customer tiene muchos Orders
+    //
+    // cascade = {PERSIST, MERGE}: si guardo o fusiono un Customer, la
+    //   operacion se propaga a sus Orders. No usamos ALL porque no queremos
+    //   que al eliminar un Customer se eliminen sus pedidos.
+    //
+    // fetch = LAZY: los orders NO se cargan al consultar un Customer.
+    //   Se cargan solo cuando llamas customer.getOrders().
+    //
+    // orphanRemoval = false: si un Order se separa de su Customer,
+    //   NO se elimina de la BD. El pedido existe independientemente.
+    //
+    // ESTRATEGIAS PARA EL BUCLE INFINITO JSON:
+    //
+    // OPCION 3 (APLICADA) - @JsonIgnoreProperties quirurgico:
+    //   Al serializar cada Order dentro de esta lista, se omite su campo &quot;customer&quot;.
+    //   Rompemos el bucle en el punto exacto donde nace.
+    //
+    // OPCION 2 - @JsonManagedReference / @JsonBackReference:
+    //   Este lado PADRE lleva @JsonManagedReference(&quot;customer-orders&quot;).
+    //   El lado hijo (Order.customer) lleva @JsonBackReference y NO se serializa.
+    //
+    // OPCION 1 - @JsonIgnore en el lado hijo:
+    //   La mas simple: Order.customer lleva @JsonIgnore.
+<span class="fc" id="L86">    @OneToMany(</span>
+            mappedBy = &quot;customer&quot;,
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE},
+            fetch = FetchType.LAZY,
+            orphanRemoval = false
+    )
+    @JsonIgnoreProperties(&quot;customer&quot;)
+<span class="fc" id="L93">    private List&lt;Order&gt; orders = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L95">    public Customer(String name, String email, String address) {</span>
+<span class="fc" id="L96">        this.name = name;</span>
+<span class="fc" id="L97">        this.email = email;</span>
+<span class="fc" id="L98">        this.address = address;</span>
+<span class="fc" id="L99">    }</span>
+
+    // Metodo de conveniencia: asigna los dos lados de la relacion.
+    // Sin esto, orders.add(order) no actualizaria order.customer en Hibernate.
+    public void addOrder(Order order) {
+<span class="nc" id="L104">        orders.add(order);</span>
+<span class="nc" id="L105">        order.setCustomer(this);</span>
+<span class="nc" id="L106">    }</span>
+
+    public void removeOrder(Order order) {
+<span class="nc" id="L109">        orders.remove(order);</span>
+<span class="nc" id="L110">        order.setCustomer(null);</span>
+<span class="nc" id="L111">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

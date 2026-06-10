@@ -13,7 +13,28 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-
+/**
+ * CONTROLLER: ProductController
+ * ==============================
+ * Expone los endpoints REST para gestión de productos.
+ *
+ * URLs disponibles (pruébalas en http://localhost:8080/h2-console o con curl/Postman):
+ *
+ *   GET    /api/products                   → todos los productos
+ *   GET    /api/products?page=0&size=5     → paginados
+ *   GET    /api/products/{id}              → uno por id
+ *   GET    /api/products/category/{cat}    → por categoría
+ *   GET    /api/products/search?q=laptop   → búsqueda por nombre
+ *   GET    /api/products/max-price?price=X → por precio máximo
+ *   POST   /api/products                   → crear producto
+ *   PUT    /api/products/{id}              → actualizar producto
+ *   DELETE /api/products/{id}              → eliminar producto
+ *   PATCH  /api/products/{id}/stock        → decrementar stock
+ *   GET    /api/products/stats             → estadísticas
+ *
+ * NOTA SESIÓN 1: Devolvemos directamente las entidades (Product).
+ * En Sesión 3 aprenderemos a usar DTOs para no exponer el modelo de BD.
+ */
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor

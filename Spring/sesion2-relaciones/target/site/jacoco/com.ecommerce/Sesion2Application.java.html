@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Sesion2Application.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce</a> &gt; <span class="el_source">Sesion2Application.java</span></div><h1>Sesion2Application.java</h1><pre class="source lang-java linenums">package com.ecommerce;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+/**
+ * Sesion 2 - Punto de entrada del proyecto E-Commerce
+ *
+ * Esta aplicacion usa una base de datos en memoria H2.
+ * No necesitan crear nada en PostgreSQL: arranca directo con:
+ *
+ *   mvn spring-boot:run
+ *
+ * Los datos iniciales vienen de src/main/resources/data.sql.
+ * La consola H2 esta disponible en http://localhost:8080/h2-console
+ *   JDBC URL: jdbc:h2:mem:ecommerce
+ *   User: sa  |  Password: (vacio)
+ *
+ * DEMOSTRACION EN CLASE: el problema N+1 y sus soluciones.
+ * Con la app corriendo, llamen estos endpoints en orden y observen
+ * la consola: cuantas queries SQL ejecuta Hibernate en cada caso.
+ *
+ *   1. GET /api/orders/demo/n1-problem   -&gt; 1 + N queries (el problema)
+ *   2. GET /api/orders/demo/join-fetch   -&gt; 1 sola query  (solucion JPQL)
+ *   3. GET /api/orders/demo/entity-graph -&gt; 1 sola query  (solucion declarativa)
+ *
+ * Para crear un pedido de prueba:
+ *   POST /api/orders
+ *   Body: {&quot;customerId&quot;:1,&quot;productIds&quot;:[1,2],&quot;quantities&quot;:[2,1]}
+ */
+@SpringBootApplication
+<span class="fc" id="L32">public class Sesion2Application {</span>
+
+    public static void main(String[] args) {
+<span class="nc" id="L35">        SpringApplication.run(Sesion2Application.class, args);</span>
+<span class="nc" id="L36">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

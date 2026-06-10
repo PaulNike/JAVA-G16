@@ -4,21 +4,29 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * SESION 2 - Relaciones, Fetching y el Problema N+1
- * ==================================================
- * Antes de arrancar, crea la BD en PostgreSQL:
- *   CREATE DATABASE ecommerce_s2;
+ *  Punto de entrada del proyecto E-Commerce
  *
- * Luego arranca con:
+ * Esta aplicacion usa una base de datos en memoria H2.
+ * No necesitan crear nada en PostgreSQL: arranca directo con:
+ *
  *   mvn spring-boot:run
  *
- * Para ver el N+1 en accion:
- *   1. Con la app corriendo, llama: GET /api/orders/demo/n1-problem
- *   2. Observa la consola: veras 1 + N queries (una por cada pedido)
- *   3. Llama: GET /api/orders/demo/join-fetch
- *   4. Observa la consola: veras 1 sola query con JOIN
- *   5. Llama: GET /api/orders/demo/entity-graph
- *   6. Mismo resultado: 1 sola query
+ * Los datos iniciales vienen de src/main/resources/data.sql.
+ * La consola H2 esta disponible en http://localhost:8080/h2-console
+ *   JDBC URL: jdbc:h2:mem:ecommerce
+ *   User: sa  |  Password: (vacio)
+ *
+ * DEMOSTRACION EN CLASE: el problema N+1 y sus soluciones.
+ * Con la app corriendo, llamen estos endpoints en orden y observen
+ * la consola: cuantas queries SQL ejecuta Hibernate en cada caso.
+ *
+ *   1. GET /api/orders/demo/n1-problem   -> 1 + N queries (el problema)
+ *   2. GET /api/orders/demo/join-fetch   -> 1 sola query  (solucion JPQL)
+ *   3. GET /api/orders/demo/entity-graph -> 1 sola query  (solucion declarativa)
+ *
+ * Para crear un pedido de prueba:
+ *   POST /api/orders
+ *   Body: {"customerId":1,"productIds":[1,2],"quantities":[2,1]}
  */
 @SpringBootApplication
 public class Sesion2Application {

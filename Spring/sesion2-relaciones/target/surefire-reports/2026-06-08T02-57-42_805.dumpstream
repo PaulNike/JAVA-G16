@@ -1,0 +1,5 @@
+# Created at 2026-06-08T02:57:43.008
+Boot Manifest-JAR contains absolute paths in classpath 'E:\TECSUP\G16\PRUEBA\sesion2-relaciones\target\test-classes'
+Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+'other' has different root
+

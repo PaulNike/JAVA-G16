@@ -1,0 +1,450 @@
+{
+  "info": {
+    "name": "Ecommerce API - Sesion 2 (Relaciones JPA)",
+    "description": "Coleccion completa de endpoints del proyecto E-commerce.\n\nBase URL configurada en la variable {{baseUrl}} = http://localhost:8080\n\nGrupos:\n- Products: CRUD + busquedas + estadisticas\n- Orders: pedidos, demos N+1 y reportes",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "customerId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "1. Listar clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            },
+            "description": "Devuelve todos los clientes (con sus pedidos via @EntityGraph)."
+          }
+        },
+        {
+          "name": "2. Obtener cliente por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            },
+            "description": "Devuelve un cliente por su ID. 404 si no existe."
+          }
+        },
+        {
+          "name": "3. Crear cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pedro Ruiz\",\n  \"email\": \"pedro@email.com\",\n  \"address\": \"Av. Sol 100\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            },
+            "description": "Registra un cliente. El email debe ser unico (400 si ya existe). Status 201."
+          }
+        },
+        {
+          "name": "4. Actualizar cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pedro Ruiz Soto\",\n  \"email\": \"pedro@email.com\",\n  \"address\": \"Av. Sol 250\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            },
+            "description": "Actualiza los datos del cliente indicado."
+          }
+        },
+        {
+          "name": "5. Eliminar cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            },
+            "description": "Elimina el cliente. 204 No Content. Puede fallar si tiene pedidos asociados (FK)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "1. Listar productos (sin paginacion)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            },
+            "description": "Devuelve la lista completa de productos."
+          }
+        },
+        {
+          "name": "1b. Listar productos (paginado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?page=0&size=5&sort=price",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                { "key": "page", "value": "0", "description": "Numero de pagina (empieza en 0)" },
+                { "key": "size", "value": "5", "description": "Elementos por pagina (default 10)" },
+                { "key": "sort", "value": "price", "description": "Campo de ordenamiento (default id)" }
+              ]
+            },
+            "description": "Devuelve los productos paginados con metadatos (totalElements, totalPages, etc.)."
+          }
+        },
+        {
+          "name": "2. Obtener producto por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            },
+            "description": "Devuelve un producto por su ID. 404 si no existe."
+          }
+        },
+        {
+          "name": "3. Productos por categoria",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/category/ELECTRONICS",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "category", "ELECTRONICS"]
+            },
+            "description": "Categorias validas: ELECTRONICS, CLOTHING, FOOD, SPORTS"
+          }
+        },
+        {
+          "name": "4. Buscar productos por nombre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/search?q=laptop",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "search"],
+              "query": [
+                { "key": "q", "value": "laptop", "description": "Texto a buscar en el nombre" }
+              ]
+            },
+            "description": "Busqueda parcial por nombre."
+          }
+        },
+        {
+          "name": "5. Productos por precio maximo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/max-price?price=200",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "max-price"],
+              "query": [
+                { "key": "price", "value": "200", "description": "Precio maximo" }
+              ]
+            },
+            "description": "Productos con precio <= valor indicado."
+          }
+        },
+        {
+          "name": "6. Crear producto",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Auriculares\",\n  \"price\": 120.0,\n  \"stock\": 25,\n  \"category\": \"ELECTRONICS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            },
+            "description": "Crea un producto. Status 201. category: ELECTRONICS | CLOTHING | FOOD | SPORTS"
+          }
+        },
+        {
+          "name": "7. Actualizar producto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Auriculares Pro\",\n  \"price\": 150.0,\n  \"stock\": 30,\n  \"category\": \"ELECTRONICS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            },
+            "description": "Actualiza por completo el producto indicado."
+          }
+        },
+        {
+          "name": "8. Decrementar stock",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}", "stock"]
+            },
+            "description": "Resta la cantidad indicada del stock del producto."
+          }
+        },
+        {
+          "name": "9. Eliminar producto",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            },
+            "description": "Elimina el producto. Status 204 No Content."
+          }
+        },
+        {
+          "name": "10. Estadisticas de productos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "stats"]
+            },
+            "description": "Total de productos y conteo por categoria."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "1. Crear pedido",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"productIds\": [1, 3],\n  \"quantities\": [2, 1]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            },
+            "description": "Crea un pedido. productIds y quantities se corresponden por indice. Status 201."
+          }
+        },
+        {
+          "name": "2. Listar todos los pedidos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            },
+            "description": "Devuelve todos los pedidos."
+          }
+        },
+        {
+          "name": "3. Obtener pedido por ID (detalle completo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}"]
+            },
+            "description": "Pedido con cliente + items + productos cargados."
+          }
+        },
+        {
+          "name": "4. Pedidos por estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/status/PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "status", "PENDING"]
+            },
+            "description": "Estados validos: PENDING, PAID, SHIPPED, DELIVERED, CANCELLED"
+          }
+        },
+        {
+          "name": "5. Demo - Problema N+1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/demo/n1-problem",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "demo", "n1-problem"]
+            },
+            "description": "Endpoint educativo que reproduce el problema N+1. Revisa los logs para ver las queries."
+          }
+        },
+        {
+          "name": "6. Demo - Solucion JOIN FETCH",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/demo/join-fetch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "demo", "join-fetch"]
+            },
+            "description": "Resuelve N+1 con JOIN FETCH (una sola query). Filtra por estado PENDING."
+          }
+        },
+        {
+          "name": "7. Demo - Solucion Entity Graph",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/demo/entity-graph",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "demo", "entity-graph"]
+            },
+            "description": "Resuelve N+1 con @EntityGraph. Filtra por estado PENDING."
+          }
+        },
+        {
+          "name": "8. Reporte - Ventas por cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/reports/sales-by-customer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "reports", "sales-by-customer"]
+            },
+            "description": "Total de ventas agrupado por cliente."
+          }
+        },
+        {
+          "name": "9. Reporte - Conteo por estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/reports/count-by-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "reports", "count-by-status"]
+            },
+            "description": "Cantidad de pedidos en cada estado."
+          }
+        },
+        {
+          "name": "10. Pedidos costosos de un cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/customer/{{customerId}}/expensive?minTotal=250",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "customer", "{{customerId}}", "expensive"],
+              "query": [
+                { "key": "minTotal", "value": "250", "description": "Total minimo del pedido (default 100)" }
+              ]
+            },
+            "description": "Pedidos de un cliente cuyo total supere minTotal."
+          }
+        },
+        {
+          "name": "11. Cancelar pedidos antiguos",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/cancel-old?daysOld=60",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "cancel-old"],
+              "query": [
+                { "key": "daysOld", "value": "60", "description": "Antiguedad minima en dias (default 30)" }
+              ]
+            },
+            "description": "Cancela en lote los pedidos mas antiguos que daysOld."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LogNotificationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.service</a> &gt; <span class="el_source">LogNotificationService.java</span></div><h1>LogNotificationService.java</h1><pre class="source lang-java linenums">package com.ecommerce.service;
+
+import com.ecommerce.entity.Order;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+/**
+ * Implementación de NotificationService que notifica mediante logs.
+ *
+ * Esta es nuestra implementación inicial. En el módulo de integración
+ * del curso crearemos EmailNotificationService que enviará correos reales.
+ * Lo importante es que OrderService no necesitará cambiar en absoluto:
+ * Spring simplemente inyectará la nueva implementación.
+ *
+ * Ese es exactamente el Principio de Inversión de Dependencias funcionando:
+ * el código de alto nivel (OrderService) no depende del código de bajo nivel
+ * (este servicio de log o el futuro de email); ambos dependen de la
+ * abstracción (NotificationService).
+ *
+ * Noten el uso de @Service en lugar de @Component. Técnicamente son
+ * equivalentes, pero @Service comunica que esta clase contiene lógica
+ * de negocio o integración. Es una convención semántica importante.
+ */
+@Service
+<span class="nc" id="L25">@Slf4j</span>
+<span class="nc" id="L26">public class LogNotificationService implements NotificationService {</span>
+
+    @Override
+    public void notifyOrderCreated(Order order) {
+        // Por ahora solo registramos en el log.
+        // En producción real esto enviaría un email o una notificación push.
+<span class="nc" id="L32">        log.info(&quot;[NOTIFICACION] Pedido #{} creado para el cliente '{}'. Total: S/ {}&quot;,</span>
+<span class="nc" id="L33">                order.getId(),</span>
+<span class="nc" id="L34">                order.getCustomer().getName(),</span>
+<span class="nc" id="L35">                order.getTotal());</span>
+<span class="nc" id="L36">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

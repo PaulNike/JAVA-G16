@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.service</a> &gt; <span class="el_source">ProductService.java</span></div><h1>ProductService.java</h1><pre class="source lang-java linenums">package com.ecommerce.service;
+
+import com.ecommerce.entity.Category;
+import com.ecommerce.entity.Product;
+import com.ecommerce.repository.ProductRepository;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * SERVICE: ProductService
+ * ========================
+ * Capa de negocio. Aquí va la lógica de la aplicación.
+ *
+ * PRINCIPIOS DEMOSTRADOS EN ESTA CLASE:
+ *
+ * 1. @Transactional en el Service (no en el Repository):
+ *    - Mejor control del alcance de la transacción
+ *    - Permite combinar múltiples operaciones en una sola transacción
+ *    - @Transactional(readOnly=true) en consultas: optimización de rendimiento
+ *
+ * 2. Ciclo de vida de entidades:
+ *    - Dentro de @Transactional: las entidades están en estado MANAGED
+ *    - Dirty checking: si modificas una entidad MANAGED, Hibernate genera
+ *      el UPDATE automáticamente sin necesidad de repo.save()
+ *
+ * 3. Paginación con Pageable:
+ *    - PageRequest.of(page, size, sort) construye el objeto Pageable
+ *    - Page&lt;T&gt; devuelve los datos + metadatos (total, páginas, etc.)
+ *
+ * @Slf4j → Lombok genera: private static final Logger log = LoggerFactory.getLogger(ProductService.class);
+ * @RequiredArgsConstructor → Lombok genera constructor con todos los campos final (inyección por constructor)
+ */
+@Service
+<span class="nc" id="L43">@RequiredArgsConstructor</span>
+<span class="nc" id="L44">@Slf4j</span>
+public class ProductService {
+
+    // Inyección por constructor (mejor práctica vs @Autowired en campo)
+    private final ProductRepository productRepository;
+
+    // ----------------------------------------------------------------
+    // OPERACIONES DE LECTURA — @Transactional(readOnly = true)
+    // ----------------------------------------------------------------
+
+    /**
+     * readOnly = true le dice a Hibernate:
+     *   - No hagas dirty checking (no rastrees cambios)
+     *   - Optimiza el flush mode
+     *   - Permite que la BD use réplicas de solo lectura
+     * Úsalo siempre en métodos que solo leen datos.
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Product&gt; getAllProducts() {
+<span class="nc" id="L63">        log.info(&quot;Buscando todos los productos&quot;);</span>
+<span class="nc" id="L64">        return productRepository.findAll();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Product getById(Long id) {
+        // orElseThrow → si no existe, lanza EntityNotFoundException
+        // Nuestro GlobalExceptionHandler la convierte en respuesta HTTP 404
+<span class="nc" id="L71">        return productRepository.findById(id)</span>
+<span class="nc" id="L72">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Producto no encontrado con id: &quot; + id));</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Product&gt; getByCategory(Category category) {
+<span class="nc" id="L77">        log.info(&quot;Buscando productos de categoría: {}&quot;, category);</span>
+<span class="nc" id="L78">        return productRepository.findByCategory(category);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Product&gt; getByMaxPrice(Double maxPrice) {
+<span class="nc" id="L83">        return productRepository.findByPriceLessThan(maxPrice);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Product&gt; search(String query) {
+<span class="nc" id="L88">        log.info(&quot;Buscando productos con nombre que contenga: '{}'&quot;, query);</span>
+<span class="nc" id="L89">        return productRepository.searchByName(query);</span>
+    }
+
+    /**
+     * PAGINACIÓN CON Pageable
+     * =======================
+     * PageRequest.of(page, size, sort):
+     *   page → número de página (0-indexed: primera página = 0)
+     *   size → cuántos elementos por página
+     *   sort → ordenamiento (campo + dirección)
+     *
+     * Page&lt;Product&gt; incluye:
+     *   .getContent()       → List&lt;Product&gt; de esta página
+     *   .getTotalElements() → total de registros en BD
+     *   .getTotalPages()    → total de páginas
+     *   .getNumber()        → página actual
+     *   .hasNext()          → existe página siguiente?
+     *   .hasPrevious()      → existe página anterior?
+     */
+    @Transactional(readOnly = true)
+    public Page&lt;Product&gt; getByCategoryPaginated(Category category, int page, int size) {
+<span class="nc" id="L110">        Pageable pageable = PageRequest.of(</span>
+                page,
+                size,
+<span class="nc" id="L113">                Sort.by(&quot;price&quot;).ascending()</span>
+        );
+<span class="nc" id="L115">        return productRepository.findByCategory(category, pageable);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Page&lt;Product&gt; getAllPaginated(int page, int size, String sortBy) {
+<span class="nc" id="L120">        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).ascending());</span>
+<span class="nc" id="L121">        return productRepository.findAll(pageable);</span>
+    }
+
+    // ----------------------------------------------------------------
+    // OPERACIONES DE ESCRITURA — @Transactional
+    // ----------------------------------------------------------------
+
+    /**
+     * CREAR PRODUCTO
+     * ==============
+     * repo.save(product) cuando product.getId() == null → genera INSERT
+     * repo.save(product) cuando product.getId() != null → genera UPDATE (merge)
+     *
+     * Ciclo de vida:
+     *   new Product(...) → estado: NEW
+     *   repo.save(p)     → estado: MANAGED → INSERT → id asignado
+     *   return p         → p sale del método con su id asignado por la BD
+     */
+    @Transactional
+    public Product create(Product product) {
+<span class="nc" id="L141">        log.info(&quot;Creando producto: {}&quot;, product.getName());</span>
+
+<span class="nc bnc" id="L143" title="All 2 branches missed.">        if (productRepository.existsByName(product.getName())) {</span>
+<span class="nc" id="L144">            throw new IllegalArgumentException(&quot;Ya existe un producto con el nombre: &quot; + product.getName());</span>
+        }
+
+<span class="nc" id="L147">        Product saved = productRepository.save(product);</span>
+<span class="nc" id="L148">        log.info(&quot;Producto creado con id: {}&quot;, saved.getId());</span>
+<span class="nc" id="L149">        return saved;</span>
+    }
+
+    /**
+     * ACTUALIZAR CON DIRTY CHECKING
+     * ==============================
+     * Dentro de @Transactional, las entidades recuperadas están en estado MANAGED.
+     * Si modificas algún campo, Hibernate genera automáticamente el UPDATE
+     * al terminar la transacción (en el flush/commit).
+     * NO necesitas llamar repo.save() al final.
+     *
+     * Este es el &quot;dirty checking&quot; de Hibernate.
+     */
+    @Transactional
+    public Product update(Long id, Product datosNuevos) {
+<span class="nc" id="L164">        Product product = productRepository.findById(id)</span>
+<span class="nc" id="L165">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Producto no encontrado: &quot; + id));</span>
+
+<span class="nc" id="L167">        product.setName(datosNuevos.getName());</span>
+<span class="nc" id="L168">        product.setPrice(datosNuevos.getPrice());</span>
+<span class="nc" id="L169">        product.setStock(datosNuevos.getStock());</span>
+<span class="nc" id="L170">        product.setCategory(datosNuevos.getCategory());</span>
+
+<span class="nc" id="L172">        log.info(&quot;Producto {} actualizado (dirty checking activo)&quot;, id);</span>
+<span class="nc" id="L173">        return product;</span>
+    }
+
+    /**
+     * ACTUALIZAR STOCK — Usando @Modifying + @Query
+     * ==============================================
+     * Cuando necesitas actualizar muchos registros de una vez,
+     * es más eficiente usar una query UPDATE directa que:
+     *   1. Cargar todas las entidades (N SELECTs)
+     *   2. Modificar cada una
+     *   3. Hacer N UPDATEs
+     *
+     * decrementStock genera un solo UPDATE atómico.
+     */
+    @Transactional
+    public void decrementStock(Long productId, Integer quantity) {
+<span class="nc" id="L189">        int updated = productRepository.decrementStock(productId, quantity);</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">        if (updated == 0) {</span>
+<span class="nc" id="L191">            throw new IllegalStateException(</span>
+                    &quot;No se pudo decrementar el stock del producto &quot; + productId +
+                    &quot;. Posiblemente stock insuficiente.&quot;);
+        }
+<span class="nc" id="L195">        log.info(&quot;Stock decrementado: producto={}, cantidad={}&quot;, productId, quantity);</span>
+<span class="nc" id="L196">    }</span>
+
+    /**
+     * ELIMINAR
+     * ========
+     * deleteById lanza EmptyResultDataAccessException si el id no existe.
+     * Lo manejamos con existsById primero para dar un mensaje más claro.
+     */
+    @Transactional
+    public void delete(Long id) {
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        if (!productRepository.existsById(id)) {</span>
+<span class="nc" id="L207">            throw new EntityNotFoundException(&quot;Producto no encontrado con id: &quot; + id);</span>
+        }
+<span class="nc" id="L209">        productRepository.deleteById(id);</span>
+<span class="nc" id="L210">        log.info(&quot;Producto {} eliminado&quot;, id);</span>
+<span class="nc" id="L211">    }</span>
+
+    // ----------------------------------------------------------------
+    // ESTADÍSTICAS
+    // ----------------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public long countByCategory(Category category) {
+<span class="nc" id="L219">        return productRepository.countByCategory(category);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

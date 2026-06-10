@@ -10,7 +10,18 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
+/**
+ * CONTROLLER: CustomerController
+ * ===============================
+ * Expone los endpoints REST para la gestión de clientes (CRUD).
+ *
+ * URLs disponibles:
+ *   GET    /api/customers        → todos los clientes
+ *   GET    /api/customers/{id}   → uno por id
+ *   POST   /api/customers        → crear cliente
+ *   PUT    /api/customers/{id}   → actualizar cliente
+ *   DELETE /api/customers/{id}   → eliminar cliente
+ */
 @RestController
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor

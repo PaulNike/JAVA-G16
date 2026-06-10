@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderItem.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.entity</a> &gt; <span class="el_source">OrderItem.java</span></div><h1>OrderItem.java</h1><pre class="source lang-java linenums">package com.ecommerce.entity;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+/**
+ * Sesion 2 - Entidad OrderItem: la tabla intermedia del modelo de dominio
+ *
+ * OrderItem representa un producto dentro de un pedido.
+ * Es la tabla intermedia entre Order y Product, pero no es una simple tabla
+ * de union (@ManyToMany). Es una entidad completa porque tiene atributos
+ * propios: quantity y unitPrice.
+ *
+ * Por que unitPrice y no usar product.price directamente?
+ * Porque el precio puede cambiar manana, pero el precio al que compro
+ * el cliente en ese pedido debe quedar grabado para siempre.
+ * El constructor captura product.getPrice() en el momento de la compra.
+ *
+ * Sobre FetchType.EAGER en product:
+ * Normalmente preferimos LAZY en todas partes para evitar cargas innecesarias.
+ * Aqui usamos EAGER porque siempre necesitamos el producto cuando mostramos
+ * un OrderItem (su nombre, precio). EAGER evita el proxy HibernateBytebuddy
+ * que causaria problemas de serializacion con Jackson.
+ * La alternativa (FetchType.LAZY + @JsonIgnoreProperties en Product) esta
+ * comentada en Product.java para que la comparen.
+ */
+@Entity
+@Table(name = &quot;order_items&quot;)
+@Getter
+<span class="pc" id="L34">@Setter</span>
+<span class="fc" id="L35">@NoArgsConstructor</span>
+<span class="nc" id="L36">@ToString(exclude = {&quot;order&quot;, &quot;product&quot;})</span>
+public class OrderItem {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L41">    private Long id;</span>
+
+    @Column(nullable = false)
+<span class="fc" id="L44">    private Integer quantity;</span>
+
+    // Precio historico: captura product.price en el momento de la compra.
+    // No cambia aunque el producto cambie de precio despues.
+    @Column(name = &quot;unit_price&quot;, nullable = false)
+<span class="fc" id="L49">    private Double unitPrice;</span>
+
+    // RELACION con Order: OrderItem es el lado DUENO (tiene order_id)
+    //
+    // OPCION 3 (APLICADA): @JsonIgnoreProperties(&quot;items&quot;) omite la lista de
+    //   items del Order al serializar. Rompe el bucle Order - OrderItem.
+    //
+    // OPCION 2: @JsonBackReference(&quot;order-items&quot;) - el order no se serializa.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;order_id&quot;, nullable = false)
+    @JsonIgnoreProperties(&quot;items&quot;)
+<span class="nc" id="L60">    private Order order;</span>
+
+    // RELACION con Product: carga EAGER para evitar proxy de Hibernate en JSON
+    //
+    // ALTERNATIVA (FetchType.LAZY):
+    //   Si vuelven a LAZY, descomenten en Product.java:
+    //   @JsonIgnoreProperties({&quot;hibernateLazyInitializer&quot;, &quot;handler&quot;})
+    //   Eso le dice a Jackson que ignore los campos internos del proxy.
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = &quot;product_id&quot;, nullable = false)
+<span class="fc" id="L70">    private Product product;</span>
+
+<span class="fc" id="L72">    public OrderItem(Product product, Integer quantity) {</span>
+<span class="fc" id="L73">        this.product = product;</span>
+<span class="fc" id="L74">        this.quantity = quantity;</span>
+<span class="fc" id="L75">        this.unitPrice = product.getPrice(); // captura el precio actual</span>
+<span class="fc" id="L76">    }</span>
+
+    public Double getSubtotal() {
+<span class="nc" id="L79">        return unitPrice * quantity;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

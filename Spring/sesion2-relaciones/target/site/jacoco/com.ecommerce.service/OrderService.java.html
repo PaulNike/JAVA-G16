@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.service</a> &gt; <span class="el_source">OrderService.java</span></div><h1>OrderService.java</h1><pre class="source lang-java linenums">package com.ecommerce.service;
+
+import com.ecommerce.discount.DiscountStrategy;
+import com.ecommerce.entity.*;
+import com.ecommerce.repository.CustomerRepository;
+import com.ecommerce.repository.OrderRepository;
+import com.ecommerce.repository.ProductRepository;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * Sesión 1 — Refactor SOLID de OrderService
+ *
+ * Antes de ver el código, lean la versión original en el historial de Git
+ * y compárenla con esta. La pregunta que quiero que se hagan es:
+ * ¿qué cambió y por qué cada cambio importa para los tests de Sesión 2?
+ *
+ * Lo que hacía createOrder() antes (todo mezclado):
+ *   - Buscaba el cliente
+ *   - Buscaba cada producto
+ *   - Validaba el stock con un if inline
+ *   - Creaba el OrderItem
+ *   - Decrementaba el stock
+ *   - Guardaba el pedido
+ *   - ... y no notificaba ni aplicaba descuentos
+ *
+ * Lo que hace ahora (cada responsabilidad en su lugar):
+ *   - Coordina: busca datos, delega validación, delega construcción,
+ *     delega cálculo, aplica descuento, persiste, notifica
+ *
+ * Esto es SRP: OrderService ya no es el experto en todo.
+ * Es un coordinador que sabe a quién delegar cada tarea.
+ *
+ * ─────────────────────────────────────────────────────────────────
+ * SOBRE LA INYECCIÓN DE DEPENDENCIAS (D de SOLID)
+ * ─────────────────────────────────────────────────────────────────
+ * Observen cómo inyectamos NotificationService como INTERFAZ, no como
+ * LogNotificationService. Spring decide en tiempo de ejecución qué
+ * implementación usar. En tests, Mockito puede reemplazarla.
+ *
+ * Lo mismo aplica a List&lt;DiscountStrategy&gt;: Spring detecta todas las
+ * clases anotadas con @Component que implementen esa interfaz y las
+ * inyecta automáticamente en esta lista. Para agregar un nuevo descuento
+ * solo creamos la clase; OrderService no cambia.
+ *
+ * ─────────────────────────────────────────────────────────────────
+ * POR QUÉ ESTO IMPORTA PARA LA SESIÓN 2 (MOCKITO)
+ * ─────────────────────────────────────────────────────────────────
+ * Cada colaborador inyectado como interfaz puede reemplazarse con un
+ * Mock en los tests unitarios:
+ *
+ *   @Mock StockValidator stockValidator
+ *   → controlamos si lanza excepción o no sin código real
+ *
+ *   @Mock NotificationService notifier
+ *   → verificamos que se llamó sin enviar ningún log o email real
+ *
+ *   @Mock OrderFactory orderFactory
+ *   → controlamos exactamente qué Order devuelve sin construir nada
+ *
+ * Sin este diseño, testear createOrder() requeriría una base de datos
+ * real y todo el contexto de Spring. Con este diseño, el test corre
+ * en milisegundos con @ExtendWith(MockitoExtension.class).
+ */
+@Service
+<span class="fc" id="L75">@Slf4j</span>
+public class OrderService {
+
+    // ── Repositories ──────────────────────────────────────────────
+    private final OrderRepository orderRepository;
+    private final CustomerRepository customerRepository;
+    private final ProductRepository productRepository;
+
+    // ── Colaboradores especializados (SRP: uno por responsabilidad) ─
+    private final NotificationService notificationService;
+    private final StockValidator stockValidator;
+    private final PriceCalculator priceCalculator;
+    private final OrderFactory orderFactory;
+
+    // List&lt;DiscountStrategy&gt; se inyecta con @Autowired en campo separado
+    // porque Mockito @InjectMocks usa el constructor, y una List&lt;&gt;
+    // de interfaces no puede ser inyectada automáticamente por constructor.
+    // Con este diseño, los tests funcionan sin configuración adicional.
+<span class="fc" id="L93">    @Autowired</span>
+    private List&lt;DiscountStrategy&gt; discountStrategies = new ArrayList&lt;&gt;();
+
+    public OrderService(OrderRepository orderRepository,
+                        CustomerRepository customerRepository,
+                        ProductRepository productRepository,
+                        NotificationService notificationService,
+                        StockValidator stockValidator,
+                        PriceCalculator priceCalculator,
+<span class="fc" id="L102">                        OrderFactory orderFactory) {</span>
+<span class="fc" id="L103">        this.orderRepository = orderRepository;</span>
+<span class="fc" id="L104">        this.customerRepository = customerRepository;</span>
+<span class="fc" id="L105">        this.productRepository = productRepository;</span>
+<span class="fc" id="L106">        this.notificationService = notificationService;</span>
+<span class="fc" id="L107">        this.stockValidator = stockValidator;</span>
+<span class="fc" id="L108">        this.priceCalculator = priceCalculator;</span>
+<span class="fc" id="L109">        this.orderFactory = orderFactory;</span>
+<span class="fc" id="L110">    }</span>
+
+
+    // ─────────────────────────────────────────────────────────────────
+    // MÉTODO PRINCIPAL — lean este método junto con la explicación
+    // de arriba para entender cada decisión de diseño
+    // ─────────────────────────────────────────────────────────────────
+    @Transactional
+    public Order createOrder(Long customerId, List&lt;Long&gt; productIds, List&lt;Integer&gt; quantities) {
+<span class="fc" id="L119">        log.info(&quot;Creando pedido para cliente {}&quot;, customerId);</span>
+
+        // Paso 1: buscar el cliente
+        // Si no existe, EntityNotFoundException se propaga hasta GlobalExceptionHandler
+        // que la convierte en HTTP 404. Observen ese manejo en el controller.
+<span class="fc" id="L124">        Customer customer = customerRepository.findById(customerId)</span>
+<span class="fc" id="L125">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Cliente no encontrado: &quot; + customerId));</span>
+
+        // Paso 2: por cada producto, validar stock y decrementar
+        // La validación la delega en StockValidator (SRP).
+        // El decremento aprovecha el dirty checking de Hibernate:
+        // como el producto es un managed entity dentro de @Transactional,
+        // Hibernate detecta el cambio en stock y genera el UPDATE automáticamente
+        // al hacer flush, sin que llamemos explícitamente a save(product).
+<span class="fc" id="L133">        List&lt;Product&gt; products = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">        for (int i = 0; i &lt; productIds.size(); i++) {</span>
+<span class="fc" id="L135">            Long productId = productIds.get(i);</span>
+<span class="fc" id="L136">            Integer qty = quantities.get(i);</span>
+
+<span class="fc" id="L138">            Product product = productRepository.findById(productId)</span>
+<span class="pc" id="L139">                    .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Producto no encontrado: &quot; + productId));</span>
+
+<span class="fc" id="L141">            stockValidator.validate(product, qty); // lanza IllegalStateException si no hay stock</span>
+<span class="fc" id="L142">            product.setStock(product.getStock() - qty); // dirty checking — Hibernate lo persiste</span>
+<span class="fc" id="L143">            products.add(product);</span>
+        }
+
+        // Paso 3: construir el Order con todos sus items (Factory Pattern)
+<span class="fc" id="L147">        Order order = orderFactory.create(customer, products, quantities);</span>
+
+        // Paso 4: calcular el total bruto explícitamente (SRP)
+        // OrderFactory ya llama a recalculateTotal() internamente.
+        // Usamos PriceCalculator aquí para obtener ese número antes
+        // de aplicar el descuento, y para que el flujo sea legible.
+<span class="fc" id="L153">        Double rawTotal = priceCalculator.calculate(order.getItems());</span>
+
+        // Paso 5: aplicar el descuento correspondiente (Strategy Pattern + OCP)
+<span class="fc" id="L156">        Double finalTotal = applyDiscount(customer, rawTotal);</span>
+<span class="fc" id="L157">        order.setTotal(finalTotal);</span>
+
+        // Paso 6: persistir
+<span class="fc" id="L160">        Order saved = orderRepository.save(order);</span>
+
+        // Paso 7: notificar (DIP — a través de la interfaz, sin conocer la implementación)
+<span class="fc" id="L163">        notificationService.notifyOrderCreated(saved);</span>
+
+<span class="fc" id="L165">        log.info(&quot;Pedido creado: id={}, total={}, items={}&quot;, saved.getId(), saved.getTotal(), saved.getItems().size());</span>
+<span class="fc" id="L166">        return saved;</span>
+    }
+
+    /**
+     * Aplica la primera estrategia de descuento aplicable para el cliente.
+     * Si la lista está vacía o ninguna aplica, devuelve el total sin cambio.
+     *
+     * Con NoDiscount en la lista, el orElse(total) nunca debería ejecutarse.
+     * Lo dejamos como salvaguarda defensiva.
+     */
+    private Double applyDiscount(Customer customer, Double total) {
+<span class="fc" id="L177">        return discountStrategies.stream()</span>
+<span class="fc" id="L178">                .filter(strategy -&gt; strategy.isApplicable(customer))</span>
+<span class="fc" id="L179">                .findFirst()</span>
+<span class="fc" id="L180">                .map(strategy -&gt; strategy.apply(total))</span>
+<span class="fc" id="L181">                .orElse(total);</span>
+    }
+
+
+    // ─────────────────────────────────────────────────────────────────
+    // MÉTODOS DE DEMOSTRACIÓN Y REPORTES — sin cambios respecto al
+    // proyecto original. Estos muestran las soluciones al problema N+1
+    // y las queries avanzadas de JPQL que vimos en sesiones anteriores.
+    // ─────────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List&lt;String&gt; demoN1Problem() {
+<span class="nc" id="L193">        log.warn(&quot;=== DEMO N+1: Observa las queries en la consola ===&quot;);</span>
+        // findAll() trae todas las órdenes en 1 query
+<span class="nc" id="L195">        List&lt;Order&gt; orders = orderRepository.findAll();</span>
+        // Aquí Hibernate ejecuta N queries más para cargar cada customer.lazy
+<span class="nc" id="L197">        return orders.stream()</span>
+<span class="nc" id="L198">                .map(o -&gt; &quot;Pedido #&quot; + o.getId() + &quot; → Cliente: &quot; + o.getCustomer().getName())</span>
+<span class="nc" id="L199">                .collect(Collectors.toList());</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;String&gt; solveN1WithJoinFetch(OrderStatus status) {
+<span class="nc" id="L204">        log.info(&quot;=== SOLUCION JOIN FETCH: 1 sola query ===&quot;);</span>
+        // JOIN FETCH en el JPQL carga orders Y customers en una sola query
+<span class="nc" id="L206">        List&lt;Order&gt; orders = orderRepository.findByStatusWithCustomer(status);</span>
+<span class="nc" id="L207">        return orders.stream()</span>
+<span class="nc" id="L208">                .map(o -&gt; &quot;Pedido #&quot; + o.getId() + &quot; → Cliente: &quot; + o.getCustomer().getName())</span>
+<span class="nc" id="L209">                .collect(Collectors.toList());</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;String&gt; solveN1WithEntityGraph(OrderStatus status) {
+<span class="nc" id="L214">        log.info(&quot;=== SOLUCION @EntityGraph: 1 sola query ===&quot;);</span>
+        // @EntityGraph es la alternativa declarativa a JOIN FETCH
+<span class="nc" id="L216">        List&lt;Order&gt; orders = orderRepository.findWithCustomerByStatus(status);</span>
+<span class="nc" id="L217">        return orders.stream()</span>
+<span class="nc" id="L218">                .map(o -&gt; &quot;Pedido #&quot; + o.getId() + &quot; → Cliente: &quot; + o.getCustomer().getName())</span>
+<span class="nc" id="L219">                .collect(Collectors.toList());</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Map&lt;String, Double&gt; getSalesByCustomer() {
+<span class="nc" id="L224">        return orderRepository.getSalesByCustomer()</span>
+<span class="nc" id="L225">                .stream()</span>
+<span class="nc" id="L226">                .collect(Collectors.toMap(</span>
+<span class="nc" id="L227">                        row -&gt; (String) row[0],</span>
+<span class="nc" id="L228">                        row -&gt; (Double) row[1]</span>
+                ));
+    }
+
+    @Transactional(readOnly = true)
+    public Order getOrderWithFullDetails(Long id) {
+<span class="nc" id="L234">        return orderRepository.findWithDetailById(id)</span>
+<span class="nc" id="L235">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Pedido no encontrado: &quot; + id));</span>
+    }
+
+    @Transactional
+    public int cancelOldOrders(int daysOld) {
+<span class="nc" id="L240">        LocalDateTime cutoff = LocalDateTime.now().minusDays(daysOld);</span>
+<span class="nc" id="L241">        int cancelled = orderRepository.cancelOldPendingOrders(cutoff);</span>
+<span class="nc" id="L242">        log.info(&quot;Cancelados {} pedidos pendientes con mas de {} dias&quot;, cancelled, daysOld);</span>
+<span class="nc" id="L243">        return cancelled;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Order&gt; getExpensiveOrdersByCustomer(Long customerId, Double minTotal) {
+<span class="nc" id="L248">        return orderRepository.findExpensiveOrdersByCustomer(customerId, minTotal);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Map&lt;String, Long&gt; getOrderCountByStatus() {
+<span class="nc" id="L253">        return orderRepository.countByStatus()</span>
+<span class="nc" id="L254">                .stream()</span>
+<span class="nc" id="L255">                .collect(Collectors.toMap(</span>
+<span class="nc" id="L256">                        row -&gt; ((OrderStatus) row[0]).name(),</span>
+<span class="nc" id="L257">                        row -&gt; (Long) row[1]</span>
+                ));
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Order&gt; getByStatus(OrderStatus status) {
+<span class="nc" id="L263">        return orderRepository.findByStatusWithCustomer(status);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Order&gt; getAll() {
+<span class="nc" id="L268">        return orderRepository.findAll();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

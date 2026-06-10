@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Order.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.entity</a> &gt; <span class="el_source">Order.java</span></div><h1>Order.java</h1><pre class="source lang-java linenums">package com.ecommerce.entity;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Sesion 2 - Entidad Order: el nodo central del grafo de objetos
+ *
+ * Order tiene DOS relaciones bidireccionales:
+ *   1. Order - Customer  (N:1 desde Order, 1:N desde Customer)
+ *   2. Order - OrderItem (1:N desde Order, N:1 desde OrderItem)
+ *
+ * Order es el DUENO de ambas relaciones porque tiene las claves foraneas:
+ *   - orders.customer_id referencia a customers
+ *   - order_items.order_id referencia a orders
+ *
+ * El metodo addItem() mantiene sincronizados ambos lados y recalcula el total.
+ * Si hacen order.getItems().add(item) sin llamar addItem(),
+ * el total quedara desactualizado y item.order no apuntara a este Order.
+ * Siempre usen los metodos de conveniencia.
+ *
+ * Sobre @EnumType.STRING vs ORDINAL:
+ *   STRING guarda &quot;PENDING&quot; en la BD (legible, estable).
+ *   ORDINAL guarda 0, 1, 2 (compacto pero fragil: reordenar el enum cambia el significado).
+ *   En el mundo real siempre usamos STRING.
+ */
+@Entity
+@Table(name = &quot;orders&quot;)
+@Getter
+<span class="pc" id="L38">@Setter</span>
+<span class="fc" id="L39">@NoArgsConstructor</span>
+<span class="nc" id="L40">@ToString(exclude = {&quot;customer&quot;, &quot;items&quot;})</span>
+public class Order {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="fc" id="L45">    private Long id;</span>
+
+<span class="fc" id="L47">    @Enumerated(EnumType.STRING)</span>
+    @Column(nullable = false)
+<span class="fc" id="L49">    private OrderStatus status = OrderStatus.PENDING;</span>
+
+<span class="fc" id="L51">    @Column(nullable = false)</span>
+<span class="fc" id="L52">    private Double total = 0.0;</span>
+
+<span class="fc" id="L54">    @Column(name = &quot;created_at&quot;, nullable = false)</span>
+<span class="pc" id="L55">    private LocalDateTime createdAt = LocalDateTime.now();</span>
+
+    // RELACION @ManyToOne: muchos Orders pertenecen a un Customer
+    //
+    // Order es el DUENO: tiene la columna customer_id en la tabla orders.
+    // fetch = LAZY: el Customer no se carga al traer un Order.
+    //   Pero ojo: acceder a order.getCustomer().getName() fuera de una
+    //   transaccion activa lanza LazyInitializationException.
+    //   Solucion: usar JOIN FETCH en el repository (ver OrderRepository).
+    //
+    // OPCION 3 (APLICADA): @JsonIgnoreProperties(&quot;orders&quot;) en este campo.
+    //   Al serializar customer dentro de un Order, se omite customer.orders.
+    //   Asi el JSON de Order incluye customer (con name, email) pero sin
+    //   la lista de ordenes del customer, rompiendo el bucle.
+    //
+    // OPCION 2: @JsonBackReference(&quot;customer-orders&quot;) - el customer NO se
+    //   serializa dentro de un Order.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;customer_id&quot;, nullable = false)
+    @JsonIgnoreProperties(&quot;orders&quot;)
+<span class="fc" id="L75">    private Customer customer;</span>
+
+    // RELACION @OneToMany: un Order tiene muchos OrderItems
+    //
+    // cascade = {PERSIST, MERGE}: al guardar un Order, sus items se persisten.
+    // orphanRemoval = true: si un item se desvincula del Order,
+    //   Hibernate lo elimina de la BD automaticamente.
+    //
+    // OPCION 3 (APLICADA): al serializar un OrderItem dentro de items,
+    //   se omite su campo &quot;order&quot;. Evitamos el bucle Order - OrderItem - Order.
+<span class="fc" id="L85">    @OneToMany(</span>
+            mappedBy = &quot;order&quot;,
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE},
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    @JsonIgnoreProperties(&quot;order&quot;)
+<span class="fc" id="L92">    private List&lt;OrderItem&gt; items = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L94">    public Order(Customer customer) {</span>
+<span class="fc" id="L95">        this.customer = customer;</span>
+<span class="fc" id="L96">    }</span>
+
+    public void addItem(OrderItem item) {
+<span class="fc" id="L99">        items.add(item);</span>
+<span class="fc" id="L100">        item.setOrder(this);</span>
+<span class="fc" id="L101">        recalculateTotal();</span>
+<span class="fc" id="L102">    }</span>
+
+    public void removeItem(OrderItem item) {
+<span class="fc" id="L105">        items.remove(item);</span>
+<span class="fc" id="L106">        item.setOrder(null);</span>
+<span class="fc" id="L107">        recalculateTotal();</span>
+<span class="fc" id="L108">    }</span>
+
+    // recalculateTotal() existe DENTRO de la entidad porque el total es una
+    // derivacion directa de los items. PriceCalculator en el service hace lo mismo
+    // pero opera sobre la lista externa antes de que el descuento se aplique.
+    public void recalculateTotal() {
+<span class="fc" id="L114">        this.total = items.stream()</span>
+<span class="fc" id="L115">                .mapToDouble(i -&gt; i.getUnitPrice() * i.getQuantity())</span>
+<span class="fc" id="L116">                .sum();</span>
+<span class="fc" id="L117">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

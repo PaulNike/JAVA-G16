@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.controller</a> &gt; <span class="el_source">ProductController.java</span></div><h1>ProductController.java</h1><pre class="source lang-java linenums">package com.ecommerce.controller;
+
+import com.ecommerce.entity.Category;
+import com.ecommerce.entity.Product;
+import com.ecommerce.service.ProductService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * CONTROLLER: ProductController
+ * ==============================
+ * Expone los endpoints REST para gestión de productos.
+ *
+ * URLs disponibles (pruébalas en http://localhost:8080/h2-console o con curl/Postman):
+ *
+ *   GET    /api/products                   → todos los productos
+ *   GET    /api/products?page=0&amp;size=5     → paginados
+ *   GET    /api/products/{id}              → uno por id
+ *   GET    /api/products/category/{cat}    → por categoría
+ *   GET    /api/products/search?q=laptop   → búsqueda por nombre
+ *   GET    /api/products/max-price?price=X → por precio máximo
+ *   POST   /api/products                   → crear producto
+ *   PUT    /api/products/{id}              → actualizar producto
+ *   DELETE /api/products/{id}              → eliminar producto
+ *   PATCH  /api/products/{id}/stock        → decrementar stock
+ *   GET    /api/products/stats             → estadísticas
+ *
+ * NOTA SESIÓN 1: Devolvemos directamente las entidades (Product).
+ * En Sesión 3 aprenderemos a usar DTOs para no exponer el modelo de BD.
+ */
+@RestController
+@RequestMapping(&quot;/api/products&quot;)
+<span class="nc" id="L40">@RequiredArgsConstructor</span>
+public class ProductController {
+
+    private final ProductService productService;
+
+    // GET /api/products  o  /api/products?page=0&amp;size=10&amp;sort=price
+    @GetMapping
+    public ResponseEntity&lt;?&gt; getAll(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false, defaultValue = &quot;10&quot;) Integer size,
+            @RequestParam(required = false, defaultValue = &quot;id&quot;) String sort) {
+
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        if (page != null) {</span>
+            // Con paginación: devuelve Page&lt;Product&gt;
+<span class="nc" id="L54">            Page&lt;Product&gt; result = productService.getAllPaginated(page, size, sort);</span>
+<span class="nc" id="L55">            return ResponseEntity.ok(Map.of(</span>
+<span class="nc" id="L56">                    &quot;content&quot;, result.getContent(),</span>
+<span class="nc" id="L57">                    &quot;totalElements&quot;, result.getTotalElements(),</span>
+<span class="nc" id="L58">                    &quot;totalPages&quot;, result.getTotalPages(),</span>
+<span class="nc" id="L59">                    &quot;currentPage&quot;, result.getNumber(),</span>
+<span class="nc" id="L60">                    &quot;hasNext&quot;, result.hasNext()</span>
+            ));
+        }
+        // Sin paginación: devuelve la lista completa
+<span class="nc" id="L64">        return ResponseEntity.ok(productService.getAllProducts());</span>
+    }
+
+    // GET /api/products/{id}
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Product&gt; getById(@PathVariable Long id) {
+<span class="nc" id="L70">        return ResponseEntity.ok(productService.getById(id));</span>
+    }
+
+    // GET /api/products/category/ELECTRONICS
+    @GetMapping(&quot;/category/{category}&quot;)
+    public ResponseEntity&lt;List&lt;Product&gt;&gt; getByCategory(@PathVariable Category category) {
+<span class="nc" id="L76">        return ResponseEntity.ok(productService.getByCategory(category));</span>
+    }
+
+    // GET /api/products/search?q=laptop
+    @GetMapping(&quot;/search&quot;)
+    public ResponseEntity&lt;List&lt;Product&gt;&gt; search(@RequestParam String q) {
+<span class="nc" id="L82">        return ResponseEntity.ok(productService.search(q));</span>
+    }
+
+    // GET /api/products/max-price?price=200
+    @GetMapping(&quot;/max-price&quot;)
+    public ResponseEntity&lt;List&lt;Product&gt;&gt; getByMaxPrice(@RequestParam Double price) {
+<span class="nc" id="L88">        return ResponseEntity.ok(productService.getByMaxPrice(price));</span>
+    }
+
+    // POST /api/products
+    // Body: {&quot;name&quot;:&quot;Auriculares&quot;,&quot;price&quot;:120.0,&quot;stock&quot;:25,&quot;category&quot;:&quot;ELECTRONICS&quot;}
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Product create(@Valid @RequestBody Product product) {
+<span class="nc" id="L96">        return productService.create(product);</span>
+    }
+
+    // PUT /api/products/{id}
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Product&gt; update(
+            @PathVariable Long id,
+            @Valid @RequestBody Product product) {
+<span class="nc" id="L104">        return ResponseEntity.ok(productService.update(id, product));</span>
+    }
+
+    // PATCH /api/products/{id}/stock
+    // Body: {&quot;quantity&quot;: 2}
+    @PatchMapping(&quot;/{id}/stock&quot;)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; decrementStock(
+            @PathVariable Long id,
+            @RequestBody Map&lt;String, Integer&gt; body) {
+<span class="nc" id="L113">        productService.decrementStock(id, body.get(&quot;quantity&quot;));</span>
+<span class="nc" id="L114">        return ResponseEntity.ok(Map.of(&quot;message&quot;, &quot;Stock actualizado correctamente&quot;));</span>
+    }
+
+    // DELETE /api/products/{id}
+    @DeleteMapping(&quot;/{id}&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+<span class="nc" id="L121">        productService.delete(id);</span>
+<span class="nc" id="L122">    }</span>
+
+    // GET /api/products/stats
+    @GetMapping(&quot;/stats&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getStats() {
+<span class="nc" id="L127">        return ResponseEntity.ok(Map.of(</span>
+<span class="nc" id="L128">                &quot;totalProducts&quot;, productService.getAllProducts().size(),</span>
+<span class="nc" id="L129">                &quot;electronics&quot;, productService.countByCategory(Category.ELECTRONICS),</span>
+<span class="nc" id="L130">                &quot;clothing&quot;, productService.countByCategory(Category.CLOTHING),</span>
+<span class="nc" id="L131">                &quot;sports&quot;, productService.countByCategory(Category.SPORTS),</span>
+<span class="nc" id="L132">                &quot;food&quot;, productService.countByCategory(Category.FOOD)</span>
+        ));
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

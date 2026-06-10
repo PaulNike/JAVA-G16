@@ -18,6 +18,8 @@
 
     <properties>
         <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
     </properties>
 
     <dependencies>
@@ -73,6 +75,90 @@
                         </exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+
+            <!--
+                JaCoCo — Java Code Coverage
+                ════════════════════════════════════════════════════
+                JaCoCo instrumenta el bytecode para medir qué líneas
+                se ejecutaron durante los tests.
+
+                Objetivo: 70% mínimo en los paquetes service y discount.
+
+                IMPORTANTE: cobertura alta ≠ tests de calidad.
+                Un test sin assertions tiene 100% de cobertura y no
+                verifica absolutamente nada. JaCoCo mide EJECUCIÓN,
+                no VERIFICACIÓN. Usa JaCoCo como indicador, no como meta.
+
+                Comandos útiles:
+                  mvn test         → corre tests + genera reporte (no verifica umbral)
+                  mvn verify       → corre tests + verifica umbral 70%
+                  target/site/jacoco/index.html → reporte HTML visual
+            -->
+            <!--
+                Maven Surefire: configuración para tests con Java 24+
+                Mockito/Byte Buddy requiere el flag experimental en Java >= 24.
+                El argLine incluye además el agente JaCoCo (configurado arriba).
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>@{argLine} -Dnet.bytebuddy.experimental=true</argLine>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <!-- Paso 1: instrumerta el agente ANTES de los tests -->
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+
+                    <!-- Paso 2: genera el reporte HTML en fase 'test' -->
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+
+                    <!-- Paso 3: verifica el umbral mínimo en fase 'verify' (mvn verify) -->
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <!-- No falla el build — reporta la violación como warning -->
+                            <haltOnFailure>false</haltOnFailure>
+                            <rules>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com/ecommerce/service/*</include>
+                                        <include>com/ecommerce/discount/*</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.70</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

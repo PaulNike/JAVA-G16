@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VipDiscount.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.discount</a> &gt; <span class="el_source">VipDiscount.java</span></div><h1>VipDiscount.java</h1><pre class="source lang-java linenums">package com.ecommerce.discount;
+
+import com.ecommerce.entity.Customer;
+import org.springframework.stereotype.Component;
+
+/**
+ * Descuento del 10% para clientes VIP.
+ *
+ * Noten algo importante: para agregar este nuevo descuento al sistema,
+ * solo creamos esta clase. No tocamos OrderService, no tocamos
+ * DiscountStrategy, no tocamos ninguna otra clase existente.
+ *
+ * Eso es exactamente lo que promete el Principio Abierto/Cerrado:
+ * extendemos el comportamiento del sistema sin modificar
+ * el código que ya funciona y que ya está testeado.
+ *
+ * El campo isVip en Customer se agregó precisamente para esta clase.
+ * Por defecto vale false, así que ningún cliente existente se ve
+ * afectado por el cambio.
+ *
+ * @Component hace que Spring registre esta clase como un bean y la
+ * incluya automáticamente cuando alguien inyecta List&lt;DiscountStrategy&gt;.
+ * No necesitamos registrarla manualmente en ningún lado.
+ */
+@Component
+<span class="fc" id="L26">public class VipDiscount implements DiscountStrategy {</span>
+
+    private static final double DISCOUNT_RATE = 0.10; // 10%
+
+    @Override
+    public Double apply(Double total) {
+<span class="fc" id="L32">        return total * (1.0 - DISCOUNT_RATE);</span>
+    }
+
+    @Override
+    public boolean isApplicable(Customer customer) {
+<span class="fc" id="L37">        return customer.isVip();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

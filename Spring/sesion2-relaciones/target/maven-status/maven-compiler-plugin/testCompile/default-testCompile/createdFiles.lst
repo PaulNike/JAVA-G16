@@ -1,0 +1,5 @@
+com\ecommerce\OrderRelationsTest.class
+com\ecommerce\unit\PriceCalculatorTest.class
+com\ecommerce\unit\StockValidatorTest.class
+com\ecommerce\unit\OrderServiceTest.class
+com\ecommerce\unit\DiscountStrategyTest.class

@@ -1,0 +1,801 @@
+openapi: 3.0.3
+info:
+  title: Ecommerce API - Sesion 2 (Relaciones JPA)
+  description: |
+    API REST del proyecto E-commerce (TECSUP - Sesion 2).
+    Gestiona clientes, productos y pedidos con relaciones JPA.
+
+    **Nota:** las respuestas devuelven directamente las entidades (en Sesion 3 se migra a DTOs).
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Servidor local
+
+tags:
+  - name: Customers
+    description: Gestion de clientes (CRUD)
+  - name: Products
+    description: Gestion de productos (CRUD + busquedas + estadisticas)
+  - name: Orders
+    description: Gestion de pedidos, demos N+1 y reportes
+
+paths:
+  # ============================================================
+  # CUSTOMERS
+  # ============================================================
+  /api/customers:
+    get:
+      tags: [Customers]
+      summary: Listar clientes
+      description: Devuelve todos los clientes con sus pedidos.
+      responses:
+        '200':
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+    post:
+      tags: [Customers]
+      summary: Crear cliente
+      description: Registra un nuevo cliente. El email debe ser unico.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '201':
+          description: Cliente creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: Email duplicado o datos invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/customers/{id}:
+    get:
+      tags: [Customers]
+      summary: Obtener cliente por ID
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+    put:
+      tags: [Customers]
+      summary: Actualizar cliente
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '200':
+          description: Cliente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: Email duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+    delete:
+      tags: [Customers]
+      summary: Eliminar cliente
+      description: Puede fallar si el cliente tiene pedidos asociados (FK).
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '204':
+          description: Cliente eliminado (sin contenido)
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  # ============================================================
+  # PRODUCTS
+  # ============================================================
+  /api/products:
+    get:
+      tags: [Products]
+      summary: Listar productos (con o sin paginacion)
+      description: Si se envia 'page', devuelve resultados paginados con metadatos; si no, la lista completa.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: Numero de pagina (empieza en 0). Activa el modo paginado.
+          schema:
+            type: integer
+        - name: size
+          in: query
+          required: false
+          description: Elementos por pagina.
+          schema:
+            type: integer
+            default: 10
+        - name: sort
+          in: query
+          required: false
+          description: Campo por el cual ordenar.
+          schema:
+            type: string
+            default: id
+      responses:
+        '200':
+          description: Lista de productos o pagina de productos
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  - $ref: '#/components/schemas/ProductPage'
+    post:
+      tags: [Products]
+      summary: Crear producto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Nombre duplicado o datos invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/products/{id}:
+    get:
+      tags: [Products]
+      summary: Obtener producto por ID
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+    put:
+      tags: [Products]
+      summary: Actualizar producto
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+    delete:
+      tags: [Products]
+      summary: Eliminar producto
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '204':
+          description: Producto eliminado (sin contenido)
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/products/category/{category}:
+    get:
+      tags: [Products]
+      summary: Productos por categoria
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Category'
+      responses:
+        '200':
+          description: Lista de productos de la categoria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+  /api/products/search:
+    get:
+      tags: [Products]
+      summary: Buscar productos por nombre
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Texto a buscar en el nombre.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Productos que coinciden
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+  /api/products/max-price:
+    get:
+      tags: [Products]
+      summary: Productos por precio maximo
+      parameters:
+        - name: price
+          in: query
+          required: true
+          description: Precio maximo del filtro.
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: Productos con precio menor o igual
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+  /api/products/{id}/stock:
+    patch:
+      tags: [Products]
+      summary: Decrementar stock
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockUpdate'
+      responses:
+        '200':
+          description: Stock actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Stock actualizado correctamente
+        '409':
+          description: Stock insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/products/stats:
+    get:
+      tags: [Products]
+      summary: Estadisticas de productos
+      description: Total de productos y conteo por categoria.
+      responses:
+        '200':
+          description: Estadisticas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalProducts:
+                    type: integer
+                    example: 42
+                  electronics:
+                    type: integer
+                  clothing:
+                    type: integer
+                  sports:
+                    type: integer
+                  food:
+                    type: integer
+
+  # ============================================================
+  # ORDERS
+  # ============================================================
+  /api/orders:
+    get:
+      tags: [Orders]
+      summary: Listar todos los pedidos
+      responses:
+        '200':
+          description: Lista de pedidos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+    post:
+      tags: [Orders]
+      summary: Crear pedido
+      description: productIds y quantities se corresponden por indice.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderInput'
+      responses:
+        '201':
+          description: Pedido creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Datos invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Obtener pedido por ID (detalle completo)
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Pedido con cliente + items + productos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Pedido no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/orders/status/{status}:
+    get:
+      tags: [Orders]
+      summary: Pedidos por estado
+      parameters:
+        - name: status
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+      responses:
+        '200':
+          description: Pedidos en ese estado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /api/orders/demo/n1-problem:
+    get:
+      tags: [Orders]
+      summary: Demo - Problema N+1
+      description: Reproduce el problema N+1. Revisa los logs para ver las queries.
+      responses:
+        '200':
+          description: Mensajes descriptivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/orders/demo/join-fetch:
+    get:
+      tags: [Orders]
+      summary: Demo - Solucion JOIN FETCH
+      description: Resuelve N+1 con JOIN FETCH (una sola query). Filtra por estado PENDING.
+      responses:
+        '200':
+          description: Mensajes descriptivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/orders/demo/entity-graph:
+    get:
+      tags: [Orders]
+      summary: Demo - Solucion Entity Graph
+      description: Resuelve N+1 con @EntityGraph. Filtra por estado PENDING.
+      responses:
+        '200':
+          description: Mensajes descriptivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/orders/reports/sales-by-customer:
+    get:
+      tags: [Orders]
+      summary: Reporte - Ventas por cliente
+      responses:
+        '200':
+          description: Total de ventas por cliente
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: number
+                  format: double
+                example:
+                  Ana Garcia: 4939.0
+                  Carlos Perez: 244.0
+
+  /api/orders/reports/count-by-status:
+    get:
+      tags: [Orders]
+      summary: Reporte - Conteo por estado
+      responses:
+        '200':
+          description: Cantidad de pedidos por estado
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                  format: int64
+                example:
+                  PENDING: 2
+                  PAID: 1
+                  SHIPPED: 1
+                  DELIVERED: 1
+                  CANCELLED: 1
+
+  /api/orders/customer/{customerId}/expensive:
+    get:
+      tags: [Orders]
+      summary: Pedidos costosos de un cliente
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: minTotal
+          in: query
+          required: false
+          description: Total minimo del pedido.
+          schema:
+            type: number
+            format: double
+            default: 100
+      responses:
+        '200':
+          description: Pedidos del cliente por encima del minimo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /api/orders/cancel-old:
+    post:
+      tags: [Orders]
+      summary: Cancelar pedidos antiguos
+      parameters:
+        - name: daysOld
+          in: query
+          required: false
+          description: Antiguedad minima en dias para cancelar.
+          schema:
+            type: integer
+            default: 30
+      responses:
+        '200':
+          description: Resumen de pedidos cancelados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Pedidos cancelados
+                  count:
+                    type: integer
+                    example: 1
+                  daysOld:
+                    type: integer
+                    example: 30
+
+# ============================================================
+# COMPONENTS
+# ============================================================
+components:
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      description: Identificador del recurso.
+      schema:
+        type: integer
+        format: int64
+
+  schemas:
+    Category:
+      type: string
+      enum: [ELECTRONICS, CLOTHING, FOOD, SPORTS]
+
+    OrderStatus:
+      type: string
+      enum: [PENDING, PAID, SHIPPED, DELIVERED, CANCELLED]
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: Ana Garcia
+        email:
+          type: string
+          example: ana@email.com
+        address:
+          type: string
+          example: Av. Lima 123
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+
+    CustomerInput:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+          maxLength: 150
+          example: Pedro Ruiz
+        email:
+          type: string
+          maxLength: 255
+          example: pedro@email.com
+        address:
+          type: string
+          maxLength: 500
+          example: Av. Sol 100
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: Laptop Dell XPS 15
+        price:
+          type: number
+          format: double
+          example: 4500.0
+        stock:
+          type: integer
+          example: 10
+        category:
+          $ref: '#/components/schemas/Category'
+
+    ProductInput:
+      type: object
+      required: [name, price, stock, category]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          example: Auriculares
+        price:
+          type: number
+          format: double
+          example: 120.0
+        stock:
+          type: integer
+          example: 25
+        category:
+          $ref: '#/components/schemas/Category'
+
+    ProductPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        totalElements:
+          type: integer
+          format: int64
+          example: 42
+        totalPages:
+          type: integer
+          example: 9
+        currentPage:
+          type: integer
+          example: 0
+        hasNext:
+          type: boolean
+          example: true
+
+    StockUpdate:
+      type: object
+      required: [quantity]
+      properties:
+        quantity:
+          type: integer
+          example: 2
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          example: 1
+        unitPrice:
+          type: number
+          format: double
+          example: 4500.0
+        subtotal:
+          type: number
+          format: double
+          example: 4500.0
+        product:
+          $ref: '#/components/schemas/Product'
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        total:
+          type: number
+          format: double
+          example: 4650.0
+        createdAt:
+          type: string
+          format: date-time
+        customer:
+          $ref: '#/components/schemas/Customer'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    OrderInput:
+      type: object
+      required: [customerId, productIds, quantities]
+      properties:
+        customerId:
+          type: integer
+          format: int64
+          example: 1
+        productIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          example: [1, 3]
+        quantities:
+          type: array
+          items:
+            type: integer
+          example: [2, 1]
+
+    ProblemDetail:
+      type: object
+      description: Respuesta de error estandar (RFC 7807).
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+          example: Not Found
+        status:
+          type: integer
+          example: 404
+        detail:
+          type: string
+          example: 'Cliente no encontrado con id: 99'
+        instance:
+          type: string
+          example: /api/customers/99

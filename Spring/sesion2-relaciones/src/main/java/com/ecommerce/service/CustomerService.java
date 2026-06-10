@@ -10,6 +10,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * SERVICE: CustomerService
+ * =========================
+ * Capa de negocio para la gestión de clientes (CRUD).
+ *
+ * Sigue las mismas convenciones que ProductService:
+ *   - @Transactional(readOnly = true) en lecturas
+ *   - @Transactional en escrituras
+ *   - Dirty checking en update (no se llama save() al final)
+ *   - Excepciones traducidas a HTTP por GlobalExceptionHandler
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -17,6 +28,9 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
 
+    // ----------------------------------------------------------------
+    // LECTURA
+    // ----------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<Customer> getAll() {
@@ -30,7 +44,15 @@ public class CustomerService {
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado con id: " + id));
     }
 
+    // ----------------------------------------------------------------
+    // ESCRITURA
+    // ----------------------------------------------------------------
 
+    /**
+     * CREAR CLIENTE
+     * El email es UNIQUE en la BD: validamos antes para dar un mensaje claro
+     * (400 Bad Request) en lugar de un error de constraint de la base de datos.
+     */
     @Transactional
     public Customer create(Customer customer) {
         log.info("Creando cliente: {}", customer.getEmail());
@@ -44,7 +66,11 @@ public class CustomerService {
         return saved;
     }
 
-
+    /**
+     * ACTUALIZAR CLIENTE (dirty checking)
+     * La entidad recuperada está MANAGED dentro de la transacción,
+     * por lo que Hibernate genera el UPDATE automáticamente al hacer commit.
+     */
     @Transactional
     public Customer update(Long id, Customer datosNuevos) {
         Customer customer = customerRepository.findById(id)
@@ -64,7 +90,11 @@ public class CustomerService {
         return customer;
     }
 
-
+    /**
+     * ELIMINAR CLIENTE
+     * Nota: si el cliente tiene pedidos asociados, la BD puede rechazar el
+     * borrado por la foreign key (customer_id en orders).
+     */
     @Transactional
     public void delete(Long id) {
         if (!customerRepository.existsById(id)) {

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PriceCalculator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Sesion 2 - Relaciones, Fetching, N+1 y JPQL</a> &gt; <a href="index.source.html" class="el_package">com.ecommerce.service</a> &gt; <span class="el_source">PriceCalculator.java</span></div><h1>PriceCalculator.java</h1><pre class="source lang-java linenums">package com.ecommerce.service;
+
+import com.ecommerce.entity.OrderItem;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+/**
+ * Sesión 1 — Principio de Responsabilidad Única (S de SOLID)
+ *
+ * Esta clase calcula el total bruto de un pedido. Solo eso.
+ *
+ * Noten que Order ya tiene su propio recalculateTotal() que se
+ * llama automáticamente al agregar items. Entonces, ¿por qué
+ * tener PriceCalculator por separado?
+ *
+ * Porque la entidad Order pertenece al modelo de datos (JPA),
+ * y mezclar lógica de negocio compleja dentro de la entidad
+ * la hace difícil de testear y de mantener. PriceCalculator
+ * permite calcular totales de forma aislada, pasarle la lista
+ * desde donde queramos, y testearlo sin base de datos.
+ *
+ * Además, en OrderService usamos PriceCalculator para obtener
+ * el total ANTES de aplicar el descuento. Ese flujo queda
+ * explícito y legible en el código, en lugar de estar oculto
+ * en un side-effect de addItem().
+ */
+@Component
+<span class="fc" id="L29">public class PriceCalculator {</span>
+
+    /**
+     * Suma el subtotal de cada OrderItem: precio_unitario × cantidad.
+     * Si la lista es null o está vacía, devuelve 0.0.
+     *
+     * Este comportamiento defensivo (tratar null como lista vacía)
+     * evita NullPointerExceptions en llamadas legítimas, como cuando
+     * se crea un pedido sin items aún. El test calcular_conNull
+     * verifica exactamente este caso.
+     */
+    public Double calculate(List&lt;OrderItem&gt; items) {
+<span class="fc bfc" id="L41" title="All 4 branches covered.">        if (items == null || items.isEmpty()) {</span>
+<span class="fc" id="L42">            return 0.0;</span>
+        }
+<span class="fc" id="L44">        return items.stream()</span>
+<span class="fc" id="L45">                .mapToDouble(item -&gt; item.getUnitPrice() * item.getQuantity())</span>
+<span class="fc" id="L46">                .sum();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
