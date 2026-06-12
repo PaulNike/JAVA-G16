@@ -1,12 +1,9 @@
-package com.ecommerce.unit;
+package com.ecommerce.service;
 
 import com.ecommerce.entity.Category;
 import com.ecommerce.entity.OrderItem;
 import com.ecommerce.entity.Product;
-import com.ecommerce.service.PriceCalculator;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -51,39 +48,7 @@ class PriceCalculatorTest {
         return new OrderItem(product, quantity);
     }
 
-    @Test
-    @DisplayName("Con 1 item: calcula precio × cantidad correctamente")
-    void calcular_conUnItem_devuelveSubtotalCorrecto() {
-        // ARRANGE — un solo item: S/ 50 × 2 unidades
-        OrderItem item = item(50.0, 2);
 
-        // ACT — ejecutar el cálculo
-        Double resultado = calculator.calculate(List.of(item));
-
-        // ASSERT — el resultado debe ser 100.0
-        assertEquals(100.0, resultado, 0.001,
-                "50.0 × 2 debe ser 100.0");
-    }
-
-    @Test
-    @DisplayName("Con múltiples items: suma todos los subtotales")
-    void calcular_conMultiplesItems_sumaCorrecta() {
-        // ARRANGE
-        // Item 1: S/ 30 × 3 = S/ 90
-        // Item 2: S/ 10 × 5 = S/ 50
-        // Total esperado: S/ 140
-        List<OrderItem> items = List.of(
-                item(30.0, 3),
-                item(10.0, 5)
-        );
-
-        // ACT
-        Double resultado = calculator.calculate(items);
-
-        // ASSERT
-        assertEquals(140.0, resultado, 0.001,
-                "30×3 + 10×5 debe ser 140.0");
-    }
 
     @Test
     @DisplayName("Con lista vacía: devuelve 0.0")
@@ -99,6 +64,7 @@ class PriceCalculatorTest {
                 "Lista vacía debe devolver exactamente 0.0");
     }
 
+    @Disabled("bug #123 pendiente de fix")
     @Test
     @DisplayName("Con null: devuelve 0.0 sin NullPointerException")
     void calcular_conNull_devuelveCeroSinExcepcion() {
@@ -142,5 +108,71 @@ class PriceCalculatorTest {
         // ASSERT
         assertEquals(esperado, resultado, 0.01,
                 String.format("%.2f × %d debe ser %.2f", precio, cantidad, esperado));
+    }
+
+    @Nested
+    @DisplayName("Cuando no hay items")
+    class SinItems {
+
+        @Test
+        @DisplayName("Con lista null: devuelve 0.0")
+        void calcular_conNull_devuelveCero() {
+            // ACT
+            double resultado = calculator.calculate(null);
+
+            // ASSERT
+            assertEquals(0.0, resultado, 0.001,
+                    "Si la lista es null debe devolver 0.0");
+        }
+
+        @Test
+        @DisplayName("Con lista vacía: devuelve 0.0")
+        void calcular_conListaVacia_devuelveCero() {
+            // ACT
+            double resultado = calculator.calculate(List.of());
+
+            // ASSERT
+            assertEquals(0.0, resultado, 0.001,
+                    "Si la lista está vacía debe devolver 0.0");
+        }
+    }
+
+    @Nested
+    @DisplayName("Cuando hay items")
+    class ConItems {
+
+        @Test
+        @DisplayName("Con 1 item: calcula precio × cantidad correctamente")
+        void calcular_conUnItem_devuelveSubtotalCorrecto() {
+            // ARRANGE
+            List<OrderItem> items = List.of(
+                    item(50.0, 2)
+            );
+
+            // ACT
+            double resultado = calculator.calculate(items);
+
+            // ASSERT
+            assertEquals(100.0, resultado, 0.001,
+                    "50.0 × 2 debe ser 100.0");
+        }
+
+        @Test
+        @DisplayName("Con múltiples items: suma todos los subtotales")
+        void calcular_conMultiplesItems_sumaCorrecta() {
+            // ARRANGE
+            List<OrderItem> items = List.of(
+                    item(30.0, 3),
+                    item(10.0, 5)
+            );
+
+            // ACT
+            double resultado = calculator.calculate(items);
+
+            // ASSERT
+            assertEquals(140.0, resultado, 0.001,
+                    "30×3 + 10×5 debe ser 140.0");
+        }
+
     }
 }
