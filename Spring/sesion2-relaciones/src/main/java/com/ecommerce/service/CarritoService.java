@@ -21,6 +21,7 @@ public class CarritoService {
 
     private final List<Producto> items = new ArrayList<>();
 
+
     public void agregarProducto(Producto producto) {
         if (producto == null)
             throw new IllegalArgumentException("El producto no puede ser null");
