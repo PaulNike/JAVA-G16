@@ -9,14 +9,23 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.codigo</groupId>
-	<artifactId>unit-testing</artifactId>
+	<artifactId>unit-testing-g16</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>unit-testing</name>
 	<description>Aprendiendo a realizar pruebas Unitarias</description>
 
 	<properties>
 		<java.version>17</java.version>
+		<jacoco.version>0.8.7</jacoco.version>
+		<sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+		<sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+		<sonar.coverage.jacoco.xmlReportPaths>
+			${project.build.directory}/coverage-reports/jacoco.xml
+		</sonar.coverage.jacoco.xmlReportPaths>
 
+		<sonar.projectKey>paulniketest_unit-testing-16</sonar.projectKey>
+		<sonar.organization>paulniketest</sonar.organization>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -72,6 +81,52 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.version}</version>
+				<executions>
+
+					<!-- PRIMERA EJECUCIÓN -->
+					<execution>
+						<id>default-prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+						<configuration>
+							<excludes>
+								<exclude>
+									com.codigo.unit_testing.aggregates.constants.Constants
+								</exclude>
+							</excludes>
+						</configuration>
+					</execution>
+
+					<!-- SEGUNDA EJECUCIÓN -->
+					<execution>
+						<id>default-report</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>
+								${project.build.directory}/coverage-reports
+							</outputDirectory>
+							<formats>
+								<format>XML</format>
+								<format>HTML</format>
+							</formats>
+						</configuration>
+					</execution>
+
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.sonarsource.scanner.maven</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>3.11.0.3922</version>
 			</plugin>
 		</plugins>
 	</build>
