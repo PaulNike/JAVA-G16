@@ -29,7 +29,7 @@ public class WebClientConfig {
     private String token;
 
     @Bean
-    public WebClient reniecWebClient(WebClient.Builder builder) {
+    public WebClient reniecWebClientBean(WebClient.Builder builder) {
         return builder
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token)

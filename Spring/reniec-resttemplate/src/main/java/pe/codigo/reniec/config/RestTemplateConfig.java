@@ -32,7 +32,7 @@ public class RestTemplateConfig {
     private String token;
 
     @Bean
-    public RestTemplate reniecRestTemplate(RestTemplateBuilder builder) {
+    public RestTemplate reniecRestTemplateBean(RestTemplateBuilder builder) {
         return builder
                 .rootUri(baseUrl)
                 .additionalInterceptors((request, body, execution) -> {
