@@ -1,0 +1,17 @@
+# Levanta Redis y PostgreSQL:
+#   docker compose up -d
+services:
+  redis:
+    image: redis:7
+    container_name: redis-reniec
+    ports:
+      - "6379:6379"
+  postgres:
+    image: postgres:16
+    container_name: pg-reniec
+    environment:
+      POSTGRES_DB: reniec_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
