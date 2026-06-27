@@ -1,0 +1,822 @@
+{
+  "info": {
+    "_postman_id": "268fdb1d-2865-475d-b636-7aed0ceb7a17",
+    "name": "RENIEC Seguridad - 3 proyectos (Security / JWT / Roles)",
+    "description": "Coleccion para probar los TRES proyectos de seguridad de la serie:\n  1) reniec-security            -> Spring Security con HTTP Basic\n  2) reniec-security-jwt        -> login con token JWT\n  3) reniec-security-jwt-roles  -> JWT + roles (autorizacion)\n\nCOMO USARLA\n- Los tres usan el puerto 8080 por defecto, asi que levanta UNO a la vez y\n  corre las peticiones de SU carpeta. (Si quieres tenerlos en paralelo, pon\n  server.port distinto en cada uno y cambia baseUrl1/2/3.)\n- En las carpetas con JWT: corre el/los LOGIN primero. El token se guarda solo\n  en variables (tokenJwt, tokenUser, tokenAdmin) y las demas peticiones lo usan.\n- Necesitas Redis y PostgreSQL arriba y tu token de RENIEC en application.properties.\n\nVARIABLES\n- baseUrl1/2/3 : URL de cada proyecto (por defecto http://localhost:8080)\n- dni (46027897), userAlumno/passAlumno, userAdmin/passAdmin\n- tokenJwt / tokenUser / tokenAdmin : se llenan solos al hacer login",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Proyecto 1 - Spring Security (HTTP Basic)",
+      "description": "Autenticacion con usuario y clave en CADA peticion (HTTP Basic). Levanta el proyecto reniec-security en el puerto 8080. Aqui NO hay token: las credenciales van en la pestana Authorization de cada request.",
+      "item": [
+        {
+          "name": "1) GET personas SIN credenciales  -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl1}}/api/v1/personas/{{dni}}",
+              "host": [
+                "{{baseUrl1}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "personas",
+                "{{dni}}"
+              ]
+            },
+            "description": "Sin credenciales, Spring Security responde 401 antes de llegar al controlador."
+          },
+          "response": []
+        },
+        {
+          "name": "2) GET personas con Basic (alumno)  -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Devuelve el documento\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"document_number\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{userAlumno}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{passAlumno}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl1}}/api/v1/personas/{{dni}}",
+              "host": [
+                "{{baseUrl1}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "personas",
+                "{{dni}}"
+              ]
+            },
+            "description": "Con credenciales validas (Basic), pasa el control y devuelve los datos."
+          },
+          "response": []
+        },
+        {
+          "name": "3) GET /auth/me con Basic  -> 200 (quien soy)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{userAlumno}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{passAlumno}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl1}}/api/v1/auth/me",
+              "host": [
+                "{{baseUrl1}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Muestra el usuario autenticado y sus roles."
+          },
+          "response": []
+        },
+        {
+          "name": "4) GET personas con clave MALA  -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{userAlumno}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "claveMala",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl1}}/api/v1/personas/{{dni}}",
+              "host": [
+                "{{baseUrl1}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "personas",
+                "{{dni}}"
+              ]
+            },
+            "description": "Credenciales incorrectas: 401."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Proyecto 2 - JWT (login con token)",
+      "description": "Login una sola vez -> token -> el token va en cada peticion (Bearer). Levanta reniec-security-jwt en 8080. IMPORTANTE: corre la peticion de LOGIN primero; guarda el token solo en la variable tokenJwt.",
+      "item": [
+        {
+          "name": "1) GET personas SIN token  -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl2}}/api/v1/personas/{{dni}}",
+              "host": [
+                "{{baseUrl2}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "personas",
+                "{{dni}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2) POST login (alumno)  -> 200 + guarda token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Recibe un token\", function () { pm.expect(json.token).to.be.a(\"string\"); });",
+                  "// Guardamos el token para las siguientes peticiones",
+                  "pm.collectionVariables.set(\"tokenJwt\", json.token);",
+                  "console.log(\"tokenJwt guardado\");"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"{{userAlumno}}\",\n  \"clave\": \"{{passAlumno}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl2}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl2}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Valida usuario/clave y devuelve el token. Un test script lo guarda en {{tokenJwt}}."
+          },
+          "response": []
+        },
+        {
+          "name": "3) GET personas con Bearer  -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenJwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl2}}/api/v1/personas/{{dni}}",
+              "host": [
+                "{{baseUrl2}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "personas",
+                "{{dni}}"
+              ]
+            },
+            "description": "Usa el token guardado. Tip: pega {{tokenJwt}} en jwt.io para ver el payload."
+          },
+          "response": []
+        },
+        {
+          "name": "4) GET /auth/me con Bearer  -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenJwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl2}}/api/v1/auth/me",
+              "host": [
+                "{{baseUrl2}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5) POST login con clave MALA  -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"{{userAlumno}}\",\n  \"clave\": \"claveMala\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl2}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl2}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Proyecto 3 - JWT + Roles (autorizacion)",
+      "description": "Autenticacion (token) + autorizacion (roles). Levanta reniec-security-jwt-roles en 8080. Corre los DOS logins primero (guardan tokenUser y tokenAdmin). Observa el contraste 403 (USER) vs 200/204 (ADMIN) en las acciones de admin.",
+      "item": [
+        {
+          "name": "1) POST login USER (alumno)  -> guarda tokenUser",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set(\"tokenUser\", pm.response.json().token);",
+                  "console.log(\"tokenUser guardado\");"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"{{userAlumno}}\",\n  \"clave\": \"{{passAlumno}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl3}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl3}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2) POST login ADMIN (admin)  -> guarda tokenAdmin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set(\"tokenAdmin\", pm.response.json().token);",
+                  "console.log(\"tokenAdmin guardado\");"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"{{userAdmin}}\",\n  \"clave\": \"{{passAdmin}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl3}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl3}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3) GET personas como USER  -> 200 (permitido)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenUser}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl3}}/api/v1/personas/{{dni}}",
+              "host": [
+                "{{baseUrl3}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "personas",
+                "{{dni}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4) DELETE personas como USER  -> 403 (sin permiso)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenUser}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl3}}/api/v1/personas/{{dni}}",
+              "host": [
+                "{{baseUrl3}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "personas",
+                "{{dni}}"
+              ]
+            },
+            "description": "@PreAuthorize bloquea: USER esta autenticado, pero NO autorizado. 403."
+          },
+          "response": []
+        },
+        {
+          "name": "5) GET admin/usuarios como USER  -> 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenUser}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl3}}/api/v1/admin/usuarios",
+              "host": [
+                "{{baseUrl3}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "usuarios"
+              ]
+            },
+            "description": "Regla por ruta: /admin/** solo ADMIN. USER recibe 403."
+          },
+          "response": []
+        },
+        {
+          "name": "6) DELETE personas como ADMIN  -> 204 (permitido)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl3}}/api/v1/personas/{{dni}}",
+              "host": [
+                "{{baseUrl3}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "personas",
+                "{{dni}}"
+              ]
+            },
+            "description": "Mismo endpoint que el #4, pero con token ADMIN: 204 No Content."
+          },
+          "response": []
+        },
+        {
+          "name": "7) GET admin/usuarios como ADMIN  -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl3}}/api/v1/admin/usuarios",
+              "host": [
+                "{{baseUrl3}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "usuarios"
+              ]
+            },
+            "description": "Lista de usuarios. Solo ADMIN."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl1",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "baseUrl2",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "baseUrl3",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "dni",
+      "value": "46027897",
+      "type": "string"
+    },
+    {
+      "key": "userAlumno",
+      "value": "alumno",
+      "type": "string"
+    },
+    {
+      "key": "passAlumno",
+      "value": "codigo123",
+      "type": "string"
+    },
+    {
+      "key": "userAdmin",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "passAdmin",
+      "value": "admin123",
+      "type": "string"
+    },
+    {
+      "key": "tokenJwt",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenUser",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenAdmin",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
